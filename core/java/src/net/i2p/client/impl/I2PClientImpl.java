@@ -2,9 +2,9 @@ package net.i2p.client.impl;
 
 /*
  * free (adj.): unencumbered; not under the control of others
- * Written by jrandom in 2003 and released into the public domain 
- * with no warranty of any kind, either expressed or implied.  
- * It probably won't  make your computer catch on fire, or eat 
+ * Written by jrandom in 2003 and released into the public domain
+ * with no warranty of any kind, either expressed or implied.
+ * It probably won't  make your computer catch on fire, or eat
  * your children, but it might.  Use at your own risk.
  *
  */
@@ -12,6 +12,7 @@ package net.i2p.client.impl;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.ByteArrayOutputStream;
 import java.security.GeneralSecurityException;
 import java.util.Properties;
 
@@ -22,6 +23,7 @@ import net.i2p.client.I2PSession;
 import net.i2p.client.I2PSessionException;
 import net.i2p.crypto.KeyGenerator;
 import net.i2p.crypto.SigType;
+import net.i2p.data.Base64;
 import net.i2p.data.Certificate;
 import net.i2p.data.Destination;
 import net.i2p.data.KeyCertificate;
@@ -79,7 +81,7 @@ public class I2PClientImpl implements I2PClient {
         return createDestination(destKeyStream, cert);
     }
 
-    /** 
+    /**
      * Create the destination with the given payload and write it out along with
      * the PrivateKey and SigningPrivateKey to the destKeyStream
      *
@@ -153,6 +155,13 @@ public class I2PClientImpl implements I2PClient {
         privateKey.writeBytes(destKeyStream);
         signingPrivKey.writeBytes(destKeyStream);
         destKeyStream.flush();
+
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        d.writeBytes(stream);
+        privateKey.writeBytes(stream);
+        signingPrivKey.writeBytes(stream);
+        stream.flush();
+        d.setSk(stream.toByteArray());
 
         return d;
     }
