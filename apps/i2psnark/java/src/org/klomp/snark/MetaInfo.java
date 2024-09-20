@@ -146,6 +146,41 @@ public class MetaInfo
   }
 
   /**
+   *  Will not change infohash.
+   *  Retains creation date of old MetaInfo if nonzero.
+   *
+   *  @parm new_announce may be null
+   *  @parm new_announce_list may be null
+   *  @parm new_comment may be null
+   *  @parm new_created_by may be null
+   *  @parm new_url_list may be null
+   *  @since 0.9.64
+   */
+  public MetaInfo(MetaInfo old, String new_announce, List<List<String>> new_announce_list, String new_comment,
+                  String new_created_by, List<String> new_url_list)
+  {
+    this.announce = new_announce;
+    this.info_hash = old.info_hash;
+    this.name = old.name;
+    this.name_utf8 = old.name_utf8;
+    this.files = old.files;
+    this.files_utf8 = old.files_utf8;
+    this.attributes = old.attributes;
+    this.lengths = old.lengths;
+    this.piece_length = old.piece_length;
+    this.piece_hashes = old.piece_hashes;
+    this.length = old.length;
+    this.privateTorrent = old.privateTorrent;
+    this.announce_list = new_announce_list;
+    this.comment = new_comment;
+    this.created_by = new_created_by;
+    this.creation_date = old.creation_date > 0 ? old.creation_date : I2PAppContext.getGlobalContext().clock().now();
+    this.url_list = new_url_list;
+    this.infoMap = old.infoMap;
+    this.infoBytesLength = old.infoBytesLength;
+  }
+
+  /**
    * Creates a new MetaInfo from the given InputStream.  The
    * InputStream must start with a correctly bencoded dictionary
    * describing the torrent.
@@ -911,10 +946,7 @@ public class MetaInfo
                   String an = announce != null ? announce : meta.getAnnounce();
                   String cm = comment != null ? comment : meta.getComment();
                   List<String> urls = url_list != null ? url_list : meta.getWebSeedURLs();
-                  // changes/adds creation date
-                  MetaInfo meta2 = new MetaInfo(an, meta.getName(), null, meta.getFiles(), meta.getLengths(),
-                                                meta.getPieceLength(0), meta.getPieceHashes(), meta.getTotalLength(), meta.getPrivateTrackerStatus(),
-                                                meta.getAnnounceList(), cb, urls, cm);
+                  MetaInfo meta2 = new MetaInfo(meta, an, meta.getAnnounceList(), cm, cb, urls);
                   java.io.File from = new java.io.File(args[i]);
                   java.io.File to = new java.io.File(args[i] + ".bak");
                   if (net.i2p.util.FileUtil.copy(from, to, true, false)) {
