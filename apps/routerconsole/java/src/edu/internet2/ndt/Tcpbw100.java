@@ -778,7 +778,7 @@ public class Tcpbw100 extends JApplet implements ActionListener {
 					_sErrMsg = _resBundDisplayMsgs.getString("unexpectedException")
 							+ " (" + e.getClass().getName() + "): "
 							+ sMessage + "\n";
-					_log.warn(_sErrMsg, e);
+					_log.error(_sErrMsg, e);
 				}
 
 				// If test failed due to any reason, mark failure reason too
@@ -965,10 +965,12 @@ public class Tcpbw100 extends JApplet implements ActionListener {
 	 * Create the "More details" window.
 	 */
 	public void createDiagnoseWindow() {
+/*
 		if (_sServerType.compareTo("web100") == 0)
 			showStatus(_resBundDisplayMsgs.getString("getWeb100Var"));
 		else
 			showStatus(_resBundDisplayMsgs.getString("getWeb10gVar"));
+*/
 
 		// create new frame
 		if (_frameWeb100Vars == null) {
@@ -1007,7 +1009,7 @@ public class Tcpbw100 extends JApplet implements ActionListener {
 	 * Create the "Statistics" window.
 	 */
 	public void createStatsWindow() {
-		showStatus(_resBundDisplayMsgs.getString("printDetailedStats"));
+		//showStatus(_resBundDisplayMsgs.getString("printDetailedStats"));
 
 		// create new frame
 		if (_frameDetailedStats == null) {
@@ -1053,6 +1055,7 @@ public class Tcpbw100 extends JApplet implements ActionListener {
 	 * </ul>
 	 */
 	public void createOptionsWindow() {
+/*
 		showStatus(_resBundDisplayMsgs.getString("showOptions"));
 
 		if (_frameOptions == null) {
@@ -1121,6 +1124,7 @@ public class Tcpbw100 extends JApplet implements ActionListener {
 		}
 		_frameOptions.setResizable(false);
 		_frameOptions.setVisible(true);
+*/
 	}
 
 	/**
@@ -1202,6 +1206,7 @@ public class Tcpbw100 extends JApplet implements ActionListener {
 		else if (source == _chkboxPreferIPv6) {
 			setsHostName(sHostName);
 		}
+/*
 		// mail to functionality
 		else if (source == _buttonMailTo) {
 			// int i; //did'nt need it
@@ -1256,6 +1261,7 @@ public class Tcpbw100 extends JApplet implements ActionListener {
 				_resultsTxtPane.append(_sErrMsg);
 			}
 		} // end mail-to functionality
+*/
 	} // actionPerformed()
 
 	/**
@@ -1318,7 +1324,7 @@ public class Tcpbw100 extends JApplet implements ActionListener {
 	 * */
 
 	public boolean test_mid(Protocol paramProtoObj) throws IOException {
-
+/*
 		// byte buff[] = new byte[8192];
 		byte buff[] = new byte[NDTConstants.MIDDLEBOX_PREDEFINED_MSS];
 
@@ -1551,6 +1557,7 @@ public class Tcpbw100 extends JApplet implements ActionListener {
 			// interpret results
 			middleboxResults(_sMidBoxTestResult);
 		}
+*/
 		return false;
 	}
 
@@ -1570,6 +1577,7 @@ public class Tcpbw100 extends JApplet implements ActionListener {
 	 *
 	 * */
 	public boolean test_sfw(Protocol protocolObj) throws IOException {
+/*
 		Message msg = new Message();
 		// start test
 		if ((_yTests & NDTConstants.TEST_SFW) == NDTConstants.TEST_SFW) {
@@ -1767,6 +1775,7 @@ public class Tcpbw100 extends JApplet implements ActionListener {
 		}
 
 		// completed the SFW test, hence return false
+*/
 		return false;
 	}
 
@@ -2345,7 +2354,7 @@ public class Tcpbw100 extends JApplet implements ActionListener {
 		Message msg = new Message();
 		// Start META tests
 		if ((_yTests & NDTConstants.TEST_META) == NDTConstants.TEST_META) {
-			showStatus(_resBundDisplayMsgs.getString("metaTest"));
+			//showStatus(_resBundDisplayMsgs.getString("metaTest"));
 			_resultsTxtPane.append(_resBundDisplayMsgs
 					.getString("sendingMetaInformation") + " ");
 			_txtStatistics.append(_resBundDisplayMsgs
@@ -3016,7 +3025,8 @@ public class Tcpbw100 extends JApplet implements ActionListener {
 			if (_log.shouldWarn())
 				_log.warn("New SSL socket to " + hostAddress + ':' + ctlPort);
 		} else {
-			rv = new Socket(hostAddress, ctlPort);
+			rv = new Socket();
+			rv.connect(new InetSocketAddress(hostAddress, ctlPort), 30*1000);;
 			if (_log.shouldWarn())
 				_log.warn("New non-SSL socket to " + hostAddress + ':' + ctlPort);
 		}
@@ -3751,6 +3761,7 @@ public class Tcpbw100 extends JApplet implements ActionListener {
 			_txtStatistics.append("\n");
 			// End tcp negotiated performance settings
 
+/*
 			// SFW test results
 			if ((_yTests & NDTConstants.TEST_SFW) == NDTConstants.TEST_SFW) {
 				// Results in the direction of Client to server
@@ -3819,9 +3830,11 @@ public class Tcpbw100 extends JApplet implements ActionListener {
 					break;
 				}
 			}
+*/
 
 			_txtDiagnosis.append("\n");
 
+/*
 			// Output relevant to the "More Details" tab, related to factors
 			// influencing throughput
 
@@ -3874,6 +3887,7 @@ public class Tcpbw100 extends JApplet implements ActionListener {
 					+ _resBundDisplayMsgs.getString("serverAcksReport") + " '"
 					+ NDTUtils.prttxt(_iS2cAck,this._resBundDisplayMsgs) + "'\n");
 			pub_diagnosis = _txtDiagnosis.getText();
+*/
 
 		} // end if (CountRTT >0)
 
@@ -3893,6 +3907,7 @@ public class Tcpbw100 extends JApplet implements ActionListener {
 	 */
 
 	public void middleboxResults(String sMidBoxTestResParam) {
+/*
 		String sServerIp;
 		String sClientIp;
 		int iMss;
@@ -4006,6 +4021,7 @@ public class Tcpbw100 extends JApplet implements ActionListener {
 			}
 		}
 		pub_statistics = _txtStatistics.getText();
+*/
 	} // middleboxResults()
 
 	/**
@@ -4574,7 +4590,7 @@ public class Tcpbw100 extends JApplet implements ActionListener {
 					Thread t, 
 					Throwable e) 
 				{
-					_log.warn("TG", e);
+					_log.error("Bandwidth test error", e);
 				}
 			};
 		
@@ -4594,7 +4610,7 @@ public class Tcpbw100 extends JApplet implements ActionListener {
 						}catch( Throwable e ){
 						
 							if ( !( e instanceof ThreadDeath )){
-								_log.warn("TG", e);
+								_log.error("Bandwidth test error", e);
 							}
 						}finally{
 							//sem.release();
