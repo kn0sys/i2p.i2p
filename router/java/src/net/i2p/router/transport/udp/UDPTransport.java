@@ -418,7 +418,6 @@ public class UDPTransport extends TransportImpl implements TimedWeightedPriority
         
         _context.statManager().createRateStat("udp.alreadyConnected", "What is the lifetime of a reestablished session", "udp", RATES);
         _context.statManager().createRateStat("udp.droppedPeer", "How long ago did we receive from a dropped peer (duration == session lifetime", "udp", RATES);
-        _context.statManager().createRateStat("udp.droppedPeerInactive", "How long ago did we receive from a dropped peer (duration == session lifetime)", "udp", RATES);
         //_context.statManager().createRateStat("udp.statusOK", "How many times the peer test returned OK", "udp", RATES);
         //_context.statManager().createRateStat("udp.statusDifferent", "How many times the peer test returned different IP/ports", "udp", RATES);
         //_context.statManager().createRateStat("udp.statusReject", "How many times the peer test returned reject unsolicited", "udp", RATES);
@@ -691,7 +690,7 @@ public class UDPTransport extends TransportImpl implements TimedWeightedPriority
             _establisher = new EstablishmentManager(_context, this);
         
         if (_handler == null)
-            _handler = new PacketHandler(_context, this, false, true, _establisher,
+            _handler = new PacketHandler(_context, this, _establisher,
                                          _inboundFragments, _testManager, _introManager);
         
         // See comments in DummyThrottle.java

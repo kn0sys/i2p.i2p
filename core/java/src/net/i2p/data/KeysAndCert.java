@@ -147,6 +147,14 @@ public class KeysAndCert extends DataStructureImpl {
         _padding = padding;
         compressPadding();
     }
+
+    /**
+     * Is there compressible padding?
+     * @since 0.9.66
+     */
+    public boolean isCompressible() {
+        return _paddingBlocks > 1;
+    }
     
     /**
      * @throws IllegalStateException if data already set
@@ -165,6 +173,7 @@ public class KeysAndCert extends DataStructureImpl {
             byte[] pad1 = pk.getPadding(kcert);
             byte[] pad2 = spk.getPadding(kcert);
             _padding = combinePadding(pad1, pad2);
+            compressPadding();
             _certificate = kcert;
         } else {
             _publicKey = pk;
@@ -258,8 +267,11 @@ public class KeysAndCert extends DataStructureImpl {
         return
                DataHelper.eq(_signingKey, ident._signingKey)
                && DataHelper.eq(_publicKey, ident._publicKey)
-               && Arrays.equals(_padding, ident._padding)
-               && DataHelper.eq(_certificate, ident._certificate);
+               && DataHelper.eq(_certificate, ident._certificate)
+               && (Arrays.equals(_padding, ident._padding) ||
+                   // failsafe as some code paths may not compress padding
+                   ((_paddingBlocks > 1 || ident._paddingBlocks > 1) &&
+                    Arrays.equals(getPadding(), ident.getPadding())));
     }
     
     /** the signing key has enough randomness in it to use it by itself for speed */
