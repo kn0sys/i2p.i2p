@@ -63,7 +63,7 @@ object {
 
 #navi {
      margin: -1px 0 0;
-     padding: 5px 3px;
+     padding: 10px 3px;
      text-align: center;
      border: 1px solid #dee2e6;
      border-radius: 2px 2px 0 0;
@@ -77,34 +77,29 @@ object {
 }
 .iframed #navi {
      margin: -11px -11px 10px;
-     padding: 7px 5px 6px;
+     padding: 13px 5px 6px;
      border-radius: 0;
      position: static
 }
-#navi a,
-#navi a:visited {
-     margin: 2px 0;
-     
-     font-weight: bold;
-}
+
+#navi .active,
 #navi.private .private,
-#navi.master .master,
+#navi.local .local,
 #navi.router .router,
 #navi.published .published {
      background: #4661A9 !important;
-     text-shadow: none !important;
      color: #fafaff !important;
 }
-#navi a:focus,
-#navi a.active,
-#navi a.abook,
-#navi a#subs,
-#navi a#config,
-#navi a#overview {
+
+#navi a,
+#navi a:visited {
+     margin: 2px 0;
+     font-weight: bold;
+     text-shadow: none !important;
      box-sizing: border-box;
      border: 1px solid #dee2e6;
      border-radius: 12px;
-     min-width: 60px!important;
+     min-width: 60px !important;
      line-height: 130%;
      background: #f6f6fa;
      box-shadow: inset 0 0 0 1px #f6f6fa;
@@ -112,12 +107,23 @@ object {
      padding: 3px 14px;
      color: #2c4e8f
 }
+
 #navi a:hover {
      background: #dee2e6 !important;
      box-shadow: inset 0 0 0 1px #dee2e6 !important;
      color: #495057 !important;
      border: 1px solid #dee2e6;
      transition: ease border 0.7s
+}
+
+.notifbubble {
+    background-color: #e33;
+    border: 1px solid #e33;
+    border-radius: 9px;
+    color: #fff;
+    margin: -16px 0 0 -4px;
+    padding: 0 4px;
+    position: absolute;
 }
 
 .invisible {
@@ -136,7 +142,7 @@ object {
      margin-top: 6px;
 }
 
-h3, h4, th, #filter span {
+h3, h4, th, #filterheader {
      color: #41465f;
 }
 
@@ -653,7 +659,7 @@ textarea[name="config"]:focus, textarea[name="content"]:focus {
      box-shadow: inset 0 0 0 1px #fff, inset 3px 3px 3px #33333f;
 }
 
-#filter span {
+#filterheader {
      display: inline-block;
      text-align: center;
      
@@ -669,14 +675,14 @@ textarea[name="config"]:focus, textarea[name="content"]:focus {
      box-shadow: inset 0 0 0 1px #fff;
 }
 
-#filter span a {
+#filterheader a {
      margin: -8px 1px;
      letter-spacing: normal;
      word-spacing: normal;
      padding: 2px 5px;
 }
 
-#filter span b {
+#filterheader b {
      font-size: 11pt;
      margin: 0 3px 0 0;
      
@@ -1377,7 +1383,7 @@ input[type="checkbox"][disabled]:checked, input[type="radio"][disabled]:checked,
 
 @media screen and (max-width: 680px) {
 #navi {
-     padding: 5px 3px !important;
+     padding: 10px 3px !important;
 }
 
 #navi a {
@@ -1424,7 +1430,7 @@ code, tt, .destaddress {
      margin-top: -40px !important;
 }
 
-#filter span, #filter a {
+#filterheader, #filter a {
      font-size: 11pt !important;
 }
 

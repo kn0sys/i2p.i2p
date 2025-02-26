@@ -39,12 +39,14 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.SortedMap;
 
+import net.i2p.app.ClientAppManager;
 import net.i2p.client.naming.NamingService;
 import net.i2p.client.naming.SingleFileNamingService;
 import net.i2p.data.DataFormatException;
 import net.i2p.data.DataHelper;
 import net.i2p.data.Destination;
 import net.i2p.servlet.RequestWrapper;
+import net.i2p.util.PortMapper;
 
 /**
  *  Talk to the NamingService API instead of modifying the hosts.txt files directly,
@@ -167,8 +169,9 @@ public class NamingServiceBean extends AddressbookBean
 			Map<String, Destination> results;
 			Properties searchProps = new Properties();
 			// only blockfile needs this
+			boolean sortByDate = "latest".equals(filter);
 			searchProps.setProperty("list", getFileName());
-			if (filter != null) {
+			if (filter != null && !sortByDate) {
 				String startsAt = filter.equals("0-9") ? "[0-9]" : filter;
 				searchProps.setProperty("startsWith", startsAt);
 			}
@@ -188,7 +191,7 @@ public class NamingServiceBean extends AddressbookBean
 			debug("Result count: " + results.size());
 			for (Map.Entry<String, Destination> entry : results.entrySet()) {
 				String name = entry.getKey();
-				if( filter != null && filter.length() > 0 ) {
+				if (filter != null && filter.length() > 0 && !sortByDate) {
 					if (filter.equals("0-9")) {
 						char first = name.charAt(0);
 						if( first < '0' || first > '9' )
@@ -203,17 +206,23 @@ public class NamingServiceBean extends AddressbookBean
 						continue;
 					}
 				}
-				String destination = entry.getValue().toBase64();
-				if (destination != null) {
-					list.addLast( new AddressBean( name, destination ) );
-				} else {
-					// delete it too?
-					System.err.println("Bad entry " + name + " in database " + service.getName());
+				AddressBean bean = new AddressBean(name, entry.getValue());
+				if (sortByDate) {
+					Properties p = new Properties();
+					Destination d = service.lookup(name, searchProps, p);
+					if (d != null && !p.isEmpty())
+						bean.setProperties(p);
 				}
+				list.addLast(bean);
 			}
 			AddressBean array[] = list.toArray(new AddressBean[list.size()]);
-			if (!(results instanceof SortedMap))
-			    Arrays.sort( array, sorter );
+			if (sortByDate) {
+				Arrays.sort(array, new AddressByDateSorter());
+				if (getBook().equals("router"))
+					clearBubbles();
+			} else if (!(results instanceof SortedMap)) {
+				Arrays.sort(array, sorter);
+			}
 			entries = array;
 
 			message = generateLoadMessage();
@@ -490,7 +499,7 @@ public class NamingServiceBean extends AddressbookBean
 		Destination dest = getNamingService().lookup(this.detail, nsOptions, outProps);
 		if (dest == null)
 			return null;
-		AddressBean rv = new AddressBean(this.detail, dest.toBase64());
+		AddressBean rv = new AddressBean(this.detail, dest);
 		rv.setProperties(outProps);
 		return rv;
 	}
@@ -516,11 +525,20 @@ public class NamingServiceBean extends AddressbookBean
 			return null;
 		List<AddressBean> rv = new ArrayList<AddressBean>(dests.size());
 		for (int i = 0; i < dests.size(); i++) {
-			AddressBean ab = new AddressBean(this.detail, dests.get(i).toBase64());
+			AddressBean ab = new AddressBean(this.detail, dests.get(i));
 			ab.setProperties(propsList.get(i));
 			rv.add(ab);
 		}
 		return rv;
+	}
+
+	/**
+	 *  @since 0.9.66
+	 */
+	private void clearBubbles() {
+		ClientAppManager cmgr = _context.clientAppManager();
+		if (cmgr != null)
+			cmgr.setBubble(PortMapper.SVC_SUSIDNS, 0, null);
 	}
 
 	/**

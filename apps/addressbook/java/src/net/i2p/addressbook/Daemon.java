@@ -32,14 +32,17 @@ import java.util.Properties;
 import java.util.Set;
 
 import net.i2p.I2PAppContext;
+import net.i2p.app.ClientAppManager;
 import net.i2p.client.naming.HostTxtEntry;
 import net.i2p.client.naming.NamingService;
 import net.i2p.client.naming.SingleFileNamingService;
 import net.i2p.data.DataFormatException;
 import net.i2p.data.Destination;
 import net.i2p.util.OrderedProperties;
+import net.i2p.util.PortMapper;
 import net.i2p.util.SecureDirectory;
 import net.i2p.util.SystemVersion;
+import net.i2p.util.Translate;
 
 /**
  * Main class of addressbook.  Performs updates, and runs the main loop.
@@ -669,6 +672,22 @@ class Daemon {
                            invalid + " invalid, " +
                            conflict + " conflicts");
             }
+            if (nnew > 0) {
+                ClientAppManager cmgr = I2PAppContext.getGlobalContext().clientAppManager();
+                if (cmgr != null) {
+                    int nc = cmgr.getBubbleCount(PortMapper.SVC_SUSIDNS) + nnew;
+                    String msg = ngettext("1 new host", "{0} new hosts", nc);
+                    cmgr.setBubble(PortMapper.SVC_SUSIDNS, nc, msg);
+                }
+            }
+    }
+
+    /**
+     *  translate (ngettext) from the routerconsole bundle
+     *  @since 0.9.66
+     */
+    private static String ngettext(String s, String p, int n) {
+        return Translate.getString(n, s, p, I2PAppContext.getGlobalContext(), "net.i2p.router.web.messages");
     }
 
     /** @since 0.9.26 */

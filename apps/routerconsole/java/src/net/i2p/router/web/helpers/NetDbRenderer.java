@@ -329,7 +329,7 @@ class NetDbRenderer {
                     if (sybil != null)
                         sybils.add(ri.getIdentity().getHash());
                     if ((i & 0x07) == 0) {
-                        out.write(buf.toString());
+                        out.append(buf);
                         buf.setLength(0);
                     }
                 }
@@ -337,7 +337,7 @@ class NetDbRenderer {
                     outputPageLinks(buf, ubuf, page, pageSize, morePages);
             }
         }
-        out.write(buf.toString());
+        out.append(buf);
         out.flush();
         if (sybil != null)
             SybilRenderer.renderSybilHTML(out, _context, sybils, sybil);
@@ -739,7 +739,7 @@ class NetDbRenderer {
                         LeaseSet2 ls2 = (LeaseSet2) myLeaseSet;
                         long pub = now - ls2.getPublished();
                         buf.append(_t("{0} ago", DataHelper.formatDuration2(pub)));
-                        exp = ls2.getExpires()-now;;
+                        exp = ls2.getExpires()-now;
                         buf.append(" - ");
                     } else {
                         exp = myLeaseSet.getLatestLeaseDate() - now;
@@ -835,7 +835,7 @@ class NetDbRenderer {
             }
             if (!ls.getHash().equals(myLeaseSet.getHash())) {
                 renderLeaseSet(buf, ls, ldebug, now, linkSusi, distance);
-                out.write(buf.toString());
+                out.append(buf);
                 buf.setLength(0);
             }
           } // for each
@@ -858,7 +858,7 @@ class NetDbRenderer {
           } // median table
           buf.append("</div>");
         }  // !empty
-        out.write(buf.toString());
+        out.append(buf);
         out.flush();
     }
 
@@ -902,7 +902,7 @@ class NetDbRenderer {
                 buf.append("</div>");
             }
         }
-        out.write(buf.toString());
+        out.append(buf);
         out.flush();
     }
 
@@ -1118,7 +1118,7 @@ class NetDbRenderer {
         if (showStats && page == 0) {
             RouterInfo ourInfo = _context.router().getRouterInfo();
             renderRouterInfo(buf, ourInfo, true, true);
-            out.write(buf.toString());
+            out.append(buf);
             buf.setLength(0);
         }
 
@@ -1143,7 +1143,7 @@ class NetDbRenderer {
                         break;
                     }
                     renderRouterInfo(buf, ri, false, full);
-                    out.write(buf.toString());
+                    out.append(buf);
                     buf.setLength(0);
                 }
                 String routerVersion = ri.getOption("router.version");
@@ -1200,7 +1200,7 @@ class NetDbRenderer {
             buf.append("</table>\n");
         }
         buf.append("</td><td style=\"vertical-align: top;\">");
-        out.write(buf.toString());
+        out.append(buf);
         buf.setLength(0);
         if (log.shouldWarn()) {
             long end = System.currentTimeMillis();
@@ -1222,7 +1222,7 @@ class NetDbRenderer {
             }
             buf.append("</table>\n");
             buf.append("</td><td style=\"vertical-align: top;\">");
-            out.write(buf.toString());
+            out.append(buf);
             buf.setLength(0);
             if (log.shouldWarn()) {
                 long end = System.currentTimeMillis();
@@ -1284,7 +1284,7 @@ class NetDbRenderer {
      //
      } // if !showStats
 
-        out.write(buf.toString());
+        out.append(buf);
         out.flush();
     }
 
@@ -1422,8 +1422,25 @@ class NetDbRenderer {
                 }
             }
         }
-        buf.append("</td></tr>\n<tr>")
-           .append("<td><b>").append(_t("Addresses")).append(":</b></td><td colspan=\"2\"");
+        buf.append("</td></tr>\n");
+        if (full) {
+            String family = info.getOption("family");
+            if (family != null) {
+                FamilyKeyCrypto fkc = _context.router().getFamilyKeyCrypto();
+                if (fkc != null) {
+                    String f = DataHelper.stripHTML(family);
+                    buf.append("<tr><td><b>").append(_t("Family"))
+                       .append(":</b><td colspan=\"2\"><span class=\"netdb_info\">")
+                       .append(fkc.verify(info) == FamilyKeyCrypto.Result.STORED_KEY ? "Verified" : "Unverified")
+                       .append(" <a href=\"/netdb?fam=")
+                       .append(f)
+                       .append("\">")
+                       .append(f)
+                       .append("</a></span></td></tr>\n");
+                }
+            }
+        }
+        buf.append("<tr><td><b>").append(_t("Addresses")).append(":</b></td><td colspan=\"2\"");
         Collection<RouterAddress> addrs = info.getAddresses();
         if (addrs.isEmpty()) {
             buf.append('>').append(_t("none"));
@@ -1464,21 +1481,6 @@ class NetDbRenderer {
                 buf.append(DataHelper.stripHTML(key)).append(" = ").append(DataHelper.stripHTML(val)).append("<br>\n");
             }
             buf.append("</code></td></tr>\n");
-            String family = info.getOption("family");
-            if (family != null) {
-                FamilyKeyCrypto fkc = _context.router().getFamilyKeyCrypto();
-                if (fkc != null) {
-                    String f = DataHelper.stripHTML(family);
-                    buf.append("<tr><td><b>").append(_t("Family"))
-                       .append(":</b><td colspan=\"2\"><span class=\"netdb_info\">")
-                       .append(fkc.verify(info) == FamilyKeyCrypto.Result.STORED_KEY ? "Verified" : "Unverified")
-                       .append(" <a href=\"/netdb?fam=")
-                       .append(f)
-                       .append("\">")
-                       .append(f)
-                       .append("</a></span></td></tr>\n");
-                }
-            }
         }
         buf.append("</table>\n");
     }

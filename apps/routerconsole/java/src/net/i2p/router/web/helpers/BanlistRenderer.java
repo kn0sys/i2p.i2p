@@ -39,7 +39,7 @@ class BanlistRenderer {
         buf.append("<h3 id=\"bannedpeers\">").append(_t("Banned Peers"));
         if (entries.isEmpty()) {
             buf.append("</h3><i>").append(_t("none")).append("</i>");
-            out.write(buf.toString());
+            out.append(buf);
             return;
         } else {
             buf.append(" (").append(entries.size()).append(")</h3>");
@@ -57,7 +57,7 @@ class BanlistRenderer {
             buf.append("<li>").append(_context.commSystem().renderPeerHTML(key));
             buf.append(' ');
             String expireString = DataHelper.formatDuration2(expires);
-            if (key.equals(Hash.FAKE_HASH))
+            if (key.equals(Hash.FAKE_HASH) || key.equals(Banlist.HASH_ZERORI))
                 buf.append(_t("Permanently banned"));
             else if (expires < 5l*24*60*60*1000)
                 buf.append(_t("Temporary ban expiring in {0}", expireString));
@@ -81,7 +81,7 @@ class BanlistRenderer {
             buf.append("</li>\n");
         }
         buf.append("</ul>\n");
-        out.write(buf.toString());
+        out.append(buf);
         out.flush();
     }
 

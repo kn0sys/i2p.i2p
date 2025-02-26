@@ -14,10 +14,12 @@ import java.util.Set;
 
 import net.i2p.I2PAppContext;
 import net.i2p.I2PException;
+import net.i2p.app.ClientAppManager;
 import net.i2p.client.I2PClient;
 import net.i2p.client.I2PClientFactory;
 import net.i2p.client.I2PSession;
 import net.i2p.client.I2PSessionException;
+import net.i2p.client.streaming.I2PSocketOptions;
 import net.i2p.crypto.KeyGenerator;
 import net.i2p.crypto.SigType;
 import net.i2p.data.DataHelper;
@@ -33,6 +35,7 @@ import net.i2p.i2ptunnel.socks.I2PSOCKSTunnel;
 import net.i2p.util.FileUtil;
 import net.i2p.util.I2PAppThread;
 import net.i2p.util.Log;
+import net.i2p.util.PortMapper;
 import net.i2p.util.RandomSource;
 import net.i2p.util.SecureFile;
 import net.i2p.util.SecureFileOutputStream;
@@ -428,8 +431,10 @@ public class TunnelController implements Logging {
         try {
             doStartTunnel();
         } catch (RuntimeException e) {
-            _log.error("Error starting the tunnel " + getName(), e);
-            log("Error starting the tunnel " + getName() + ": " + e.getMessage());
+            String msg = "Error starting the tunnel " + getName();
+            _log.error(msg, e);
+            addBubble(msg);
+            log(msg + ": " + e.getMessage());
             // if we don't acquire() then the release() in stopTunnel() won't work
             acquire();
             stopTunnel();
@@ -949,6 +954,8 @@ public class TunnelController implements Logging {
                         _config.setProperty(OPT_POST_TOTAL_MAX, Integer.toString(I2PTunnelHTTPServer.DEFAULT_POST_TOTAL_MAX));
                     }
                 }
+                if (!_config.containsKey(I2PSocketOptions.PROP_PROFILE))
+                    _config.setProperty(I2PSocketOptions.PROP_PROFILE, Integer.toString(I2PSocketOptions.PROFILE_BULK));
             }
             if (isClient(type) &&
                 (type.equals(TYPE_HTTP_CLIENT) || Boolean.parseBoolean(_config.getProperty(PROP_SHARED)))) {
@@ -1396,6 +1403,25 @@ public class TunnelController implements Logging {
     }
 
     /**
+     * @param msg may be null
+     * @since 0.9.66
+     */
+    private void addBubble(String msg) {
+        addBubble(_tunnel.getContext(), msg);
+    }
+
+    /**
+     * @param msg may be null
+     * @since 0.9.66
+     */
+    static void addBubble(I2PAppContext ctx, String msg) {
+        ClientAppManager cmgr = ctx.clientAppManager();
+        if (cmgr != null) {
+            cmgr.addBubble(PortMapper.SVC_I2PTUNNEL, msg);
+        }
+    }
+
+    /**
      * @since 0.9.15
      */
     @Override
@@ -1474,6 +1500,7 @@ public class TunnelController implements Logging {
                             msg = "Offline signature in private key file " + f + " for tunnel expired " + DataHelper.formatTime(exp) + ", stopping the tunnel!";
                         _log.log(Log.CRIT, msg);
                         _tunnel.log(msg);
+                        addBubble(msg);
                         stopTunnel();
                         return;
                     }
