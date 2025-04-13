@@ -398,7 +398,7 @@ public abstract class KademliaNetworkDatabaseFacade extends NetworkDatabaseFacad
         //// expire some routers
         // Don't run until after RefreshRoutersJob has run, and after validate() will return invalid for old routers.
         if (!isClientDb() && !_context.commSystem().isDummy()) {
-            boolean isFF = _context.getBooleanProperty(FloodfillMonitorJob.PROP_FLOODFILL_PARTICIPANT);
+            boolean isFF = _context.getBooleanProperty(FloodfillNetworkDatabaseFacade.PROP_FLOODFILL_PARTICIPANT);
             long down = _context.router().getEstimatedDowntime();
             long delay = (down == 0 || (!isFF && down > 30*60*1000) || (isFF && down > 24*60*60*1000)) ?
                          ROUTER_INFO_EXPIRATION_FLOODFILL + 10*60*1000 :
@@ -1441,10 +1441,15 @@ public abstract class KademliaNetworkDatabaseFacade extends NetworkDatabaseFacad
         //               + routerInfo.getOptionsMap().size() + " options on "
         //               + new Date(routerInfo.getPublished()));
     
-        _context.peerManager().setCapabilities(key, routerInfo.getCapabilities());
-        // don't store old routers to disk
-        if (persist && VersionComparator.comp(routerInfo.getVersion(), StoreJob.MIN_STORE_VERSION) < 0)
-            persist = false;
+        String caps = routerInfo.getCapabilities();
+        _context.peerManager().setCapabilities(key, caps);
+        // don't store old or unreachable routers to disk
+        if (persist) {
+            if (caps.indexOf(Router.CAPABILITY_UNREACHABLE) >= 0)
+                persist = false;
+            else if (VersionComparator.comp(routerInfo.getVersion(), StoreJob.MIN_STORE_VERSION) < 0)
+                persist = false;
+        }
         _ds.put(key, routerInfo, persist);
         if (rv == null)
             _kb.add(key);

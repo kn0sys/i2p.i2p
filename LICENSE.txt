@@ -182,10 +182,10 @@ Launchers:
    Copyright (c) 2002-2018 EPFL, Lausanne / Lightbend, Inc. , unless otherwise specified.
    See licenses/LICENSE-Scala.md
 
-Java Service Wrapper Community Edition 3.5.44:
+Java Service Wrapper Community Edition 3.5.60:
    (Windows: 3.5.25)
    (not included in most distribution packages)
-   Copyright (C) 1999-2020 Tanuki Software, Ltd. All Rights Reserved.
+   Copyright (C) 1999-2024 Tanuki Software, Ltd. All Rights Reserved.
    See licenses/LICENSE-Wrapper.txt
 
 
@@ -315,6 +315,10 @@ Applications:
    Router Console Iframe-resizer 4.3.9:
    Copyright (c) 2013-2023 David J. Bradshaw
    See licenses/LICENSE-Iframe-resizer.txt
+
+   Router Console country coordinates:
+   Adapted from Google Dataset Publishing Language to convert to Mercator
+   CC BY 4.0 https://creativecommons.org/licenses/by/4.0/
 
    SAM (sam.jar):
    Public domain.
