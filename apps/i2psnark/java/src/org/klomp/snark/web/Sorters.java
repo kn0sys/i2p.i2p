@@ -181,14 +181,6 @@ class Sorters {
         }
 
         protected abstract int compareIt(Snark l, Snark r);
-
-        protected static int compLong(long l, long r) {
-            if (l < r)
-                return -1;
-            if (l > r)
-                return 1;
-            return 0;
-        }
     }
 
 
@@ -201,7 +193,11 @@ class Sorters {
             if (rv != 0)
                 return rv;
             // use reverse remaining as first tie break
-            return compLong(r.getNeededLength(), l.getNeededLength());
+            rv = Long.compare(r.getNeededLength(), l.getNeededLength());
+            if (rv != 0)
+                return rv;
+            // use reverse peer count as second tie break
+            return r.getPeerCount() - l.getPeerCount();
         }
 
         private static int getStatus(Snark snark) {
@@ -247,7 +243,7 @@ class Sorters {
         public RemainingComparator(boolean rev, String lang) { super(rev, lang); }
 
         public int compareIt(Snark l, Snark r) {
-            return compLong(l.getNeededLength(), r.getNeededLength());
+            return Long.compare(l.getNeededLength(), r.getNeededLength());
         }
     }
 
@@ -256,7 +252,7 @@ class Sorters {
         public ETAComparator(boolean rev, String lang) { super(rev, lang); }
 
         public int compareIt(Snark l, Snark r) {
-            return compLong(eta(l), eta(r));
+            return Long.compare(eta(l), eta(r));
         }
 
         private static long eta(Snark snark) {
@@ -278,7 +274,7 @@ class Sorters {
         public SizeComparator(boolean rev, String lang) { super(rev, lang); }
 
         public int compareIt(Snark l, Snark r) {
-            return compLong(l.getTotalLength(), r.getTotalLength());
+            return Long.compare(l.getTotalLength(), r.getTotalLength());
         }
     }
 
@@ -289,7 +285,7 @@ class Sorters {
         public int compareIt(Snark l, Snark r) {
             long ld = l.getTotalLength() - l.getRemainingLength();
             long rd = r.getTotalLength() - r.getRemainingLength();
-            return compLong(ld, rd);
+            return Long.compare(ld, rd);
         }
     }
 
@@ -298,7 +294,7 @@ class Sorters {
         public UploadedComparator(boolean rev, String lang) { super(rev, lang); }
 
         public int compareIt(Snark l, Snark r) {
-            return compLong(l.getUploaded(), r.getUploaded());
+            return Long.compare(l.getUploaded(), r.getUploaded());
         }
     }
 
@@ -307,7 +303,7 @@ class Sorters {
         public DownRateComparator(boolean rev, String lang) { super(rev, lang); }
 
         public int compareIt(Snark l, Snark r) {
-            return compLong(l.getDownloadRate(), r.getDownloadRate());
+            return Long.compare(l.getDownloadRate(), r.getDownloadRate());
         }
     }
 
@@ -316,7 +312,7 @@ class Sorters {
         public UpRateComparator(boolean rev, String lang) { super(rev, lang); }
 
         public int compareIt(Snark l, Snark r) {
-            return compLong(l.getUploadRate(), r.getUploadRate());
+            return Long.compare(l.getUploadRate(), r.getUploadRate());
         }
     }
 
@@ -502,14 +498,6 @@ class Sorters {
         }
 
         protected abstract int compareIt(FileAndIndex l, FileAndIndex r);
-
-        protected static int compLong(long l, long r) {
-            if (l < r)
-                return -1;
-            if (l > r)
-                return 1;
-            return 0;
-        }
     }
 
     private static class FAIRemainingComparator extends FAISort {
@@ -517,7 +505,7 @@ class Sorters {
         public FAIRemainingComparator(boolean rev) { super(rev); }
 
         public int compareIt(FileAndIndex l, FileAndIndex r) {
-            return compLong(l.remaining, r.remaining);
+            return Long.compare(l.remaining, r.remaining);
         }
     }
 
@@ -526,7 +514,7 @@ class Sorters {
         public FAISizeComparator(boolean rev) { super(rev); }
 
         public int compareIt(FileAndIndex l, FileAndIndex r) {
-            return compLong(l.length, r.length);
+            return Long.compare(l.length, r.length);
         }
     }
 

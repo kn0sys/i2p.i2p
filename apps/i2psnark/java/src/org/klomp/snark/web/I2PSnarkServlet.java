@@ -884,16 +884,21 @@ public class I2PSnarkServlet extends BasicServlet {
         if (searchList == null)
             return null;
         List<Snark> matches = new ArrayList<Snark>(32);
+        loop:
         for (Snark snark : snarks) {
             String lcname = Normalizer.normalize(snark.getBaseName().toLowerCase(Locale.US), Normalizer.Form.NFKD);
-            // search for any term (OR)
             for (int j = 0; j < searchList.size(); j++) {
                 String term = searchList.get(j);
-                if (lcname.contains(term)) {
-                    matches.add(snark);
-                    break;
-                }
+                // search for any term (OR)
+                //if (lcname.contains(term)) {
+                //    matches.add(snark);
+                //    break;
+                //}
+                // search for all terms (AND)
+                if (!lcname.contains(term))
+                    continue loop;
             }
+            matches.add(snark);
         }
         return matches;
     }
@@ -3099,13 +3104,22 @@ public class I2PSnarkServlet extends BasicServlet {
         } catch (Throwable t) {}
         StringBuilder buf = new StringBuilder(128);
         buf.append("<select name=\"").append(selName).append("\">\n");
+        boolean found = false;
         for (int i = min; i <= max; i++) {
             buf.append("<option value=\"").append(i).append("\" ");
-            if (i == now)
+            if (i == now) {
                 buf.append("selected=\"selected\" ");
+                found = true;
+            }
             // constants to prevent tagging
             buf.append(">").append(ngettext(DUMMY1 + name, DUMMY0 + name + 's', i));
             buf.append("</option>\n");
+        }
+        if (!found) {
+            buf.append("<option value=\"").append(now).append("\" ")
+               .append("selected=\"selected\" ")
+               .append(">").append(ngettext(DUMMY1 + name, DUMMY0 + name + 's', now))
+               .append("</option>\n");
         }
         buf.append("</select>\n");
         return buf.toString();
@@ -3397,6 +3411,7 @@ public class I2PSnarkServlet extends BasicServlet {
                    .append("</span></td></tr>\n");
             }
 
+            long[] dates = _manager.getSavedAddedAndCompleted(snark);
             String announce = null;
             MetaInfo meta = snark.getMetaInfo();
             if (meta != null && !showEdit) {
@@ -3504,7 +3519,6 @@ public class I2PSnarkServlet extends BasicServlet {
                        .append(DataHelper.escapeHTML(cby))
                        .append("</td></tr>\n");
                 }
-                long[] dates = _manager.getSavedAddedAndCompleted(snark);
                 if (dates[0] > 0) {
                     String date = DataHelper.formatTime(dates[0]);
                     buf.append("<tr><td>");
@@ -3563,9 +3577,29 @@ public class I2PSnarkServlet extends BasicServlet {
                    .append("</td></tr>\n");
             }
 
-            // We don't have the hash of the torrent file
-            //buf.append("<tr><td>").append(_t("Maggot link")).append(": <a href=\"").append(MAGGOT).append(hex).append(':').append(hex).append("\">")
-            //   .append(MAGGOT).append(hex).append(':').append(hex).append("</a></td></tr>");
+            if (dates[0] > 0) {
+                String date = DataHelper.formatTime(dates[0]);
+                long sz = snark.getTotalLength();
+                long time;
+                if (storage.complete()) {
+                    time = dates[1] - dates[0];
+                } else {
+                    sz -= snark.getRemainingLength();
+                    time = _context.clock().now() - dates[0];
+                }
+                time /= 1000;
+                if (time >= 30) {
+                    long rate = sz / time;
+                    if (rate >= 100) {
+                        buf.append("<tr><td>");
+                        toThemeImg(buf, "head_rx");
+                        buf.append("</td><td><b>")
+                           .append(_t("Down Rate")).append("</b></td><td>")
+                           .append(formatSizeDec(rate))
+                           .append("ps</td></tr>\n");
+                    }
+                }
+            }
 
             buf.append("<tr id=\"torrentInfoStats\"><td>");
             toThemeImg(buf, "head_rx");

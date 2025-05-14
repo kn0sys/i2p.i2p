@@ -95,6 +95,7 @@ trans.fa = core/locale/messages_fa.po
 trans.fi = core/locale/messages_fi.po
 trans.fr = core/locale/messages_fr.po
 trans.gan = core/locale/messages_gan.po
+trans.hi = core/locale/messages_hi.po
 trans.hu = core/locale/messages_hu.po
 ;; Java converts id to in
 trans.id = core/locale/messages_in.po
@@ -136,6 +137,7 @@ trans.fa = router/locale/messages_fa.po
 trans.fi = router/locale/messages_fi.po
 trans.fr = router/locale/messages_fr.po
 trans.gan = router/locale/messages_gan.po
+trans.hi = router/locale/messages_hi.po
 trans.hu = router/locale/messages_hu.po
 ;; Java converts id to in
 trans.id = router/locale/messages_in.po
@@ -214,6 +216,7 @@ trans.gan = apps/routerconsole/locale-news/messages_gan.po
 trans.gl = apps/routerconsole/locale-news/messages_gl.po
 ;; Java converts he to iw
 trans.he = apps/routerconsole/locale-news/messages_iw.po
+trans.hi = apps/routerconsole/locale-news/messages_hi.po
 trans.hu = apps/routerconsole/locale-news/messages_hu.po
 ;; Java converts id to in
 trans.id = apps/routerconsole/locale-news/messages_in.po
@@ -382,6 +385,7 @@ trans.fi = apps/desktopgui/locale/messages_fi.po
 trans.fr = apps/desktopgui/locale/messages_fr.po
 trans.gan = apps/desktopgui/locale/messages_gan.po
 trans.gl = apps/desktopgui/locale/messages_gl.po
+trans.hi = apps/desktopgui/locale/messages_hi.po
 trans.hu = apps/desktopgui/locale/messages_hu.po
 ;; Java converts id to in
 trans.id = apps/desktopgui/locale/messages_in.po
@@ -429,6 +433,7 @@ trans.fi = apps/susimail/locale/messages_fi.po
 trans.fr = apps/susimail/locale/messages_fr.po
 trans.gan = apps/susimail/locale/messages_gan.po
 trans.gl = apps/susimail/locale/messages_gl.po
+trans.hi = apps/susimail/locale/messages_hi.po
 trans.hr = apps/susimail/locale/messages_hr.po
 trans.hu = apps/susimail/locale/messages_hu.po
 ;; Java converts he to iw
@@ -597,6 +602,7 @@ trans.fi = apps/ministreaming/locale/messages_fi.po
 trans.fr = apps/ministreaming/locale/messages_fr.po
 trans.gan = apps/ministreaming/locale/messages_gan.po
 trans.gl = apps/ministreaming/locale/messages_gl.po
+trans.hi = apps/ministreaming/locale/messages_hi.po
 trans.hu = apps/ministreaming/locale/messages_hu.po
 ;; Java converts id to in
 trans.id = apps/ministreaming/locale/messages_in.po
@@ -709,6 +715,7 @@ trans.cs = apps/routerconsole/resources/docs/readme_cs.html
 trans.de = apps/routerconsole/resources/docs/readme_de.html
 trans.fr = apps/routerconsole/resources/docs/readme_fr.html
 trans.gan = apps/routerconsole/resources/docs/readme_gan.html
+trans.hi = apps/routerconsole/resources/docs/readme_hi.html
 trans.hu = apps/routerconsole/resources/docs/readme_hu.html
 ;; Java converts id to in
 trans.id = apps/routerconsole/resources/docs/readme_in.html
