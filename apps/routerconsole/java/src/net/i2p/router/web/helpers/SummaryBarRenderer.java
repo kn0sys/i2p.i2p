@@ -371,8 +371,14 @@ class SummaryBarRenderer {
                 .append(_t("Manage your I2P hosts file here (I2P domain name resolution)"))
                 .append("\">")
                 .append(nbsp(tx));
-            addBubble(rbuf, PortMapper.SVC_SUSIDNS);
             rbuf.append("</a>\n");
+            StringBuilder bbuf = new StringBuilder(128);
+            addBubble(bbuf, PortMapper.SVC_SUSIDNS);
+            if (bbuf.length() > 0) {
+                rbuf.append("<a href=\"/dns?book=router&amp;filter=latest\" target=\"_top\">");
+                rbuf.append(bbuf);
+                rbuf.append("</a>\n");
+            }
             svcs.put(tx, rbuf.toString());
         }
 
@@ -787,21 +793,11 @@ class SummaryBarRenderer {
            .append(": ")
            .append(reachability.getMessage())
            .append("</a></span></h4>\n");
-        if (!SigType.ECDSA_SHA256_P256.isAvailable()) {
-            buf.append("<hr>\n<h4><span class=\"warn\"><a href=\"http://trac.i2p2.i2p/wiki/Crypto/ECDSA");
-            if ("ru".equals(Messages.getLanguage(_context)))
-                buf.append("-ru");
-            buf.append("\" target=\"_top\" title=\"")
-               .append(_t("See more information on the wiki"))
-               .append("\">")
-               .append(_t("Warning: ECDSA is not available. Update your Java or OS"))
-               .append("</a></span></h4>\n");
-        }
-        if (!SystemVersion.isJava7()) {
+        if (!SystemVersion.isJava(17)) {
             buf.append("<hr><h4><span class=\"warn\">")
                .append(_t("Warning: Java version {0} is no longer supported by I2P.", System.getProperty("java.version")))
                .append(' ')
-               .append(_t("Update Java to version {0} or higher to receive I2P updates.", "7"))
+               .append(_t("Update Java to version {0} or higher to receive I2P updates.", "17"))
                .append("</span></h4>\n");
         }
         return buf.toString();

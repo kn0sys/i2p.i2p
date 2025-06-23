@@ -17,6 +17,7 @@ import java.util.TreeSet;
 
 import net.i2p.data.DataHelper;
 import net.i2p.data.router.RouterAddress;
+import net.i2p.router.CommSystemFacade;
 import net.i2p.router.transport.Transport;
 import net.i2p.router.transport.TransportManager;
 import net.i2p.router.transport.TransportUtil;
@@ -111,7 +112,10 @@ public class PeerHelper extends HelperBase {
         }
         renderNavBar(out);
         if (_transport == null) {
-            out.write("<p id=\"upnpstatus\"><b>");
+            if (_context.commSystem().getStatus() == CommSystemFacade.Status.OK)
+                out.write("<p id=\"statusok\"><b>");
+            else
+                out.write("<p id=\"upnpstatus\"><b>");
             out.write(_t("Status"));
             out.write(": ");
             out.write(_context.commSystem().getLocalizedStatusString());
