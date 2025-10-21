@@ -1,3 +1,20 @@
+2025-10-11 idk
+ * SAM: Add support for Datagram 2/3 (Proposal 163)
+
+2025-09-08 2.10.0 (API 0.9.67) released
+
+2025-09-08 idk
+ * Pull translations from Transifex
+
+2025-09-05 zzz
+ * Translations update
+
+2025-09-03 zzz
+ * Console: New partial Icelandic translation
+
+2025-09-01 zzz
+ * GeoIP 2025-09-01
+
 2025-08-27 zzz
  * NetDB: Preliminary fix for exploratory lookups
 
@@ -117,7 +134,7 @@
    - Remove old NTCP 1 handshake buffers
 
 2025-04-30 zzz
- * I2CP: Datagram 2/3 preliminary support (Proposal163)
+ * I2CP: Datagram 2/3 preliminary support (Proposal 163)
  * Jetty: Migrate jetty.xml files at startup
    to fix id and DTD issues for existing installs
 
