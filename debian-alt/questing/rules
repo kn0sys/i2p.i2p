@@ -88,28 +88,18 @@ endif
 	@# debian and ubuntu: everywhere
 	@/bin/echo -e "with-geoip-database=true" >> $(CURDIR)/override.properties
 
-	@# ubuntu: in xenial
-	@# debian: in jessie-backports stretch sid
-	@/bin/echo -e "with-libjetty9-java=true" >> $(CURDIR)/override.properties
-	mkdir -p $(CURDIR)/apps/jetty/jettylib
-	ln -sf /usr/share/java/jetty9-continuation.jar $(CURDIR)/apps/jetty/jettylib/jetty-continuation.jar
-	ln -sf /usr/share/java/jetty9-deploy.jar $(CURDIR)/apps/jetty/jettylib/jetty-deploy.jar
-	ln -sf /usr/share/java/jetty9-http.jar $(CURDIR)/apps/jetty/jettylib/jetty-http.jar
-	ln -sf /usr/share/java/jetty9-io.jar $(CURDIR)/apps/jetty/jettylib/jetty-io.jar
-	ln -sf /usr/share/java/jetty9-rewrite.jar $(CURDIR)/apps/jetty/jettylib/jetty-rewrite-handler.jar
-	ln -sf /usr/share/java/jetty9-security.jar $(CURDIR)/apps/jetty/jettylib/jetty-security.jar
-	ln -sf /usr/share/java/jetty9-servlet.jar $(CURDIR)/apps/jetty/jettylib/jetty-servlet.jar
-	ln -sf /usr/share/java/jetty9-servlets.jar $(CURDIR)/apps/jetty/jettylib/jetty-servlets.jar
-	ln -sf /usr/share/java/jetty9-start.jar $(CURDIR)/apps/jetty/jettylib/jetty-start.jar
-	ln -sf /usr/share/java/jetty9-util.jar $(CURDIR)/apps/jetty/jettylib/jetty-util.jar
-	ln -sf /usr/share/java/jetty9-webapp.jar $(CURDIR)/apps/jetty/jettylib/jetty-webapp.jar
-	ln -sf /usr/share/java/jetty9-xml.jar $(CURDIR)/apps/jetty/jettylib/jetty-xml.jar
-	ln -sf /usr/share/java/jetty9-server.jar $(CURDIR)/apps/jetty/jettylib/org.mortbay.jetty.jar
-	ln -sf /usr/share/java/jetty9-jmx.jar $(CURDIR)/apps/jetty/jettylib/org.mortbay.jmx.jar
+	@# No Jetty 12 in Ubuntu
+
 	@# following two are formerly from libservlet3.1-java, now in their own packages
 	ln -sf /usr/share/java/servlet-api.jar $(CURDIR)/apps/jetty/jettylib/javax.servlet.jar
 	@# this is roughly the same as tomcat8-jsp-api.jar, we use this one
 	ln -sf /usr/share/java/jsp-api.jar $(CURDIR)/apps/jetty/jettylib/jsp-api.jar
+
+	@# ubuntu: plucky+
+	@# debian: trixie+
+	@# the libslf4j2-java package does NOT provide a non-versioned file except in the maven-repo dir
+	@/bin/echo -e "with-libslf4j2-java=true" >> $(CURDIR)/override.properties
+	ln -sf /usr/share/maven-repo/org/slf4j/slf4j-api/2.x/slf4j-api-2.x.jar $(CURDIR)/apps/jetty/jettylib/slf4j2-api.jar
 
 	@# debian and ubuntu: buster, disco
 	@/bin/echo -e "with-libtomcat9-java=true" >> $(CURDIR)/override.properties
@@ -143,6 +133,11 @@ endif
 	@/bin/echo -e "with-libjson-simple-java=true" >> $(CURDIR)/override.properties
 	@mkdir -p $(CURDIR)/core/java/build
 	ln -sf /usr/share/java/json-simple.jar $(CURDIR)/core/java/build/json-simple.jar
+
+	@# 1.80 or higher debian: trixie+; ubuntu: questing+
+	@/bin/echo -e "with-libbcprov-java=true" >> $(CURDIR)/override.properties
+	@mkdir -p $(CURDIR)/router/java/build
+	ln -sf /usr/share/java/bcprov.jar $(CURDIR)/router/java/build/bcprov.jar
 
 	@# debian: everywhere; ubuntu: trusty+
 	@/bin/echo -e "with-famfamfam-flag-png=true" >> $(CURDIR)/override.properties
