@@ -427,7 +427,16 @@ public class ConfigClientsHandler extends FormHandler {
                     try {
                         File path = new File(_context.getBaseDir(), "webapps");
                         path = new File(path, app + ".war");
-                        WebAppStarter.startWebApp(_context, s, app, path.getAbsolutePath());
+                        // Can't start a webapp from a webapp with this classloader because Jetty hides config classes
+                        ClassLoader save = Thread.currentThread().getContextClassLoader();
+                        if (save != null)
+                            Thread.currentThread().setContextClassLoader(ClassLoader.getSystemClassLoader());
+                        try {
+                            WebAppStarter.startWebApp(_context, s, app, path.getAbsolutePath());
+                        } finally {
+                            if (save != null)
+                                Thread.currentThread().setContextClassLoader(save);
+                        }
                         addFormNoticeNoEscape(_t("WebApp") + " <a href=\"/" + app + "/\">" + _t(app) + "</a> " + _t("started") + '.');
                     } catch (Throwable e) {
                         addFormError(_t("Failed to start") + ' ' + _t(app) + ": " + e);
