@@ -1,3 +1,16 @@
+2026-02-06 zzz
+ * Debian: Resolute/trixie fixes
+
+2026-02-05 zzz
+ * Debian: Package fixes
+ * NetDB: Tweak RI drop probabilities
+
+2026-02-04 zzz
+ * Router: Robustness fixes
+
+2026-02-03 zzz
+ * Debian: Jammy build fixes
+
 2026-02-02 zzz
  * Debian: Updates for trixie/resolute
 
