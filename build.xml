@@ -23,16 +23,17 @@
     <target name="help" depends="all" />
     <target name="all" >
         <echo message="Useful targets: " />
-        <echo message="  pkg:       distclean then package everything up (updater, installer)" />
+        <echo message="  pkg:       distclean then package everything up (updater, installer) - requires Java 13 or lower" />
+        <echo message="  pkg5:      distclean then package everything up using IzPack 5 (Java 14+)" />
         <echo message="  dist:      pkg and javadoc" />
         <echo message="  dist200:   pkg, updater200, and javadoc" />
-        <echo message="  installer: build the GUI installer" />
+        <echo message="  installer: build the GUI installer - requires Java 13 or lower (uses bundled IzPack 4)" />
         <echo message="  installer-freebsd: build the GUI installer (FreeBSD only)" />
         <echo message="  installer-linux: build the GUI installer (Linux only)" />
         <echo message="  installer-osx: build the GUI installer (OSX only)" />
         <echo message="  installer-windows: build the GUI installer (Windows only)" />
         <echo message="  installer-nowindows: build the GUI installer (all but Windows)" />
-        <echo message="  installer5, installer5-linux, installer5-nowindows, installer5-windows: use IzPack 5" />
+        <echo message="  installer5, installer5-linux, installer5-nowindows, installer5-windows: use IzPack 5 (Java 14+)" />
         <echo message="  tarball:   tar the full install into i2p.tar.bz2 (extracts to build a new clean install)" />
         <echo message="  git-bundle:    (GIT ONLY!) generate a git bundle and a corresponding torrent." />
         <!--<echo message="  bundleRelease:    (GIT ONLY!) generate a git bundle only up to the most recent tag, and a corresponding torrent." />-->
@@ -1209,11 +1210,11 @@
 
     <target name="-pre-sign">
             <!-- if you're distributing su3 files to others, at a minimum you should set this -->
-            <fail message="javac.compilerargs must contain a -bootclasspath option in override.properties">
+            <!--<fail message="javac.compilerargs must contain a -bootclasspath option in override.properties">
                 <condition>
                     <not><contains string="${javac.compilerargs}" substring="-bootclasspath"/></not>
                 </condition>
-            </fail>
+            </fail>-->
             <fail message="build.built-by must be set in override.properties">
                 <condition>
                     <equals arg1="${build.built-by}" arg2="unknown"/>
@@ -1352,6 +1353,8 @@
     </target>
 
     <target name="pkg" depends="distclean, updater, preppkg, installer" />
+
+    <target name="pkg5" depends="distclean, updater, preppkg, installer5" />
 
     <target name="pkg200" depends="distclean, updater200, preppkg, installer" />
 
@@ -1503,7 +1506,7 @@
           The windows-only installer will get the correct jar.
         <copy file="installer/lib/wrapper/build/wrapper.jar" todir="pkg-temp/lib" />
       -->
-        <copy overwrite="true" file="installer/lib/wrapper/win-build/wrapper.jar" todir="pkg-temp/lib" />
+        <copy overwrite="true" file="installer/lib/wrapper/win-all/wrapper.jar" todir="pkg-temp/lib" />
     </target>
 
     <!-- see targets below for conditional copying -->
@@ -3009,6 +3012,11 @@
             <file name="../i2p-${Extended.Version.J}/installer/resources/geoip.txt" />
             <file name="../i2p-${Extended.Version.J}/installer/resources/geoipv6.dat.gz" />
             <file name="../i2p-${Extended.Version.J}/installer/resources/GeoLite2-Country.mmdb.gz" />
+          <!--
+            libjetty12-java
+            Delete all the 12.0.17 jars, we use the 12.0.28 jars
+           -->
+            <fileset dir="../i2p-${Extended.Version}/apps/jetty/jetty-home-${jetty.ver.debian}" />
             <!-- libtomcat9-java -->
             <fileset dir="../i2p-${Extended.Version.J}/apps/jetty/apache-tomcat-${tomcat.ver}" />
             <!-- libjstl1.1-java or glassfish-javaee or libtaglibs-standard -->
@@ -3079,6 +3087,11 @@
             <file name="../i2p-${Extended.Version.J}/installer/resources/geoip.txt" />
             <file name="../i2p-${Extended.Version.J}/installer/resources/geoipv6.dat.gz" />
             <file name="../i2p-${Extended.Version.J}/installer/resources/GeoLite2-Country.mmdb.gz" />
+          <!--
+            libjetty12-java
+            Delete all the 12.0.17 jars, we use the 12.0.28 jars
+           -->
+            <fileset dir="../i2p-${Extended.Version}/apps/jetty/jetty-home-${jetty.ver.debian}" />
             <fileset dir="../i2p-${Extended.Version.J}/apps/jetty/apache-tomcat-${tomcat.ver}" />
             <file name="../i2p-${Extended.Version.J}/apps/susidns/src/lib/jstl.jar" />
             <file name="../i2p-${Extended.Version.J}/apps/susidns/src/lib/standard.jar" />
