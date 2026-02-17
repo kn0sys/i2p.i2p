@@ -252,8 +252,9 @@ class NetDbRenderer {
                 filterSigType(routers, type);
             if (etype != null && !routers.isEmpty())
                 filterEncType(routers, etype);
+            // if cost is set also, we filter for that here
             if (tr != null && !routers.isEmpty())
-                filterTransport(routers, tr);
+                filterTransport(routers, tr, cost);
             if (family != null && !routers.isEmpty())
                 filterFamily(routers, family);
             if (ip != null && !routers.isEmpty()) {
@@ -270,7 +271,8 @@ class NetDbRenderer {
                 filterIP(routers, ipv6, altIPv6);
             if (ssucaps != null && !routers.isEmpty())
                 filterSSUCaps(routers, ssucaps);
-            if (cost != 0 && !routers.isEmpty())
+            // if transport was set also, we filtered for that above
+            if (cost != 0 && tr == null && !routers.isEmpty())
                 filterCost(routers, cost);
             if (itag != null && !routers.isEmpty())
                 filterITag(routers, itag);
@@ -309,8 +311,29 @@ class NetDbRenderer {
                     buf.append("Caps ").append(caps).append(' ');
                 if (ssucaps != null)
                     buf.append("Transport caps ").append(ssucaps).append(' ');
-                if (tr != null)
-                    buf.append(_t("Transport")).append(' ').append(tr).append(' ');
+                if (tr != null) {
+                    String transport;
+                    if (tr.equals("NTCP_1")) {
+                        transport = "NTCP (v1 only)";
+                    } else if (tr.equals("NTCP_2")) {
+                        transport = "NTCP (v2 supported)";
+                    } else if (tr.equals("SSU_1")) {
+                        transport = "SSU (v1 only)";
+                    } else if (tr.equals("SSU_2")) {
+                        transport = "SSU (v2 supported)";
+                    } else if (tr.equals("NTCP2_0")) {
+                        transport = "NTCP2+MLKEM (any)";
+                    } else if (tr.equals("NTCP2_3")) {
+                        transport = "NTCP2+MLKEM512";
+                    } else if (tr.equals("NTCP2_4")) {
+                        transport = "NTCP2+MLKEM768";
+                    } else if (tr.equals("NTCP2_5")) {
+                        transport = "NTCP2+MLKEM1024";
+                    } else {
+                        transport = tr;
+                    }
+                    buf.append(_t("Transport")).append(' ').append(transport).append(' ');
+                }
                 if (icount > 0)
                     buf.append("with ").append(icount).append(" introducers ");
                 buf.append(_t("not found in network database"));
@@ -490,9 +513,10 @@ class NetDbRenderer {
 
     /**
      *  Remove all non-matching from routers
+     *  @param cost if nonzero, filter for that also
      *  @since 0.9.64 split out from above
      */
-    private static void filterTransport(Set<RouterInfo> routers, String tr) {
+    private static void filterTransport(Set<RouterInfo> routers, String tr, int cost) {
         String transport;
         int mode;
         if (tr.equals("NTCP_1")) {
@@ -507,30 +531,91 @@ class NetDbRenderer {
         } else if (tr.equals("SSU_2")) {
             transport = "SSU";
             mode = 3;
+        } else if (tr.equals("NTCP2_0")) {
+            transport = "NTCP2";
+            mode = 5;
+        } else if (tr.equals("NTCP2_3")) {
+            transport = "NTCP2";
+            mode = 6;
+        } else if (tr.equals("NTCP2_4")) {
+            transport = "NTCP2";
+            mode = 7;
+        } else if (tr.equals("NTCP2_5")) {
+            transport = "NTCP2";
+            mode = 8;
         } else {
             transport = tr;
             mode = 4;
         }
+
+        loop:
         for (Iterator<RouterInfo> iter = routers.iterator(); iter.hasNext(); ) {
             RouterInfo ri = iter.next();
-            RouterAddress ra = ri.getTargetAddress(transport);
-            if (ra != null) {
-                switch (mode) {
-                    case 0:
-                    case 2:
-                        if (ra.getOption("v") == null)
+            if (cost == 0) {
+                // just look for any matching
+                RouterAddress ra = ri.getTargetAddress(transport);
+                if (ra != null) {
+                    switch (mode) {
+                        case 0:
+                        case 2:
+                            if (ra.getOption("v") == null)
+                                continue;
+                            break;
+
+                        case 1:
+                        case 3:
+                            if (ra.getOption("v") != null)
+                                continue;
+                            break;
+
+                        case 4:
                             continue;
-                        break;
 
-                    case 1:
-                    case 3:
-                        if (ra.getOption("v") != null)
-                            continue;
-                        break;
+                        case 5:
+                            if (ra.getOption("pq") != null)
+                                continue;
+                            break;
 
-                    case 4:
-                        continue;
+                        case 6:
+                            if ("3".equals(ra.getOption("pq")))
+                                continue;
+                            break;
 
+                        case 7:
+                            if ("4".equals(ra.getOption("pq")))
+                                continue;
+                            break;
+
+                        case 8:
+                            if ("5".equals(ra.getOption("pq")))
+                                continue;
+                            break;
+                    }
+                }
+            } else {
+                // go through all matching and compare cost
+                List<RouterAddress> ras = ri.getTargetAddresses(transport);
+                if (!ras.isEmpty()) {
+                    for (RouterAddress ra : ras) {
+                        switch (mode) {
+                            case 0:
+                            case 2:
+                                if (ra.getOption("v") == null && cost == ra.getCost())
+                                    continue loop;
+                                break;
+
+                            case 1:
+                            case 3:
+                                if (ra.getOption("v") != null && cost == ra.getCost())
+                                    continue loop;
+                                break;
+
+                            case 4:
+                                if (cost == ra.getCost())
+                                    continue loop;
+                                break;
+                        }
+                    }
                 }
             }
             iter.remove();
