@@ -57,6 +57,11 @@ public class TunnelPool {
     private static final int BUILD_TRIES_LENGTH_OVERRIDE_1 = 8;
     private static final int BUILD_TRIES_LENGTH_OVERRIDE_2 = 12;
     private static final long STARTUP_TIME = 30*60*1000;
+    /**
+     *  The rate for getRateName()
+     *  @since 0.9.69
+     */
+    public static final long RATE = TUNNEL_LIFETIME;
     
     TunnelPool(RouterContext ctx, TunnelPoolManager mgr, TunnelPoolSettings settings, TunnelPeerSelector sel) {
         _context = ctx;
@@ -118,7 +123,7 @@ public class TunnelPool {
         }
         _context.statManager().createRequiredRateStat(_rateName,
                                "Tunnel Bandwidth (Bytes/sec)", "Tunnels", 
-                               new long[] { 5*60*1000l });
+                               new long[] { RATE });
     }
     
     synchronized void shutdown() {
@@ -146,14 +151,35 @@ public class TunnelPool {
      *  @since 0.9.66
      */
     public int getAvgBWPerTunnel() {
-        RateStat stat = _context.statManager().getRate(_rateName);
-        if (stat == null)
-            return 0;
-        Rate rate = stat.getRate(5*60*1000);
-        if (rate == null)
-            return 0;
+        int rv = 0;
+        // average from stat, which does not include current tunnels
         int count = _settings.isInbound() ? _settings.getQuantity() : _settings.getTotalQuantity();
-        return (int) (((float) rate.getAvgOrLifetimeAvg()) / count);
+        RateStat stat = _context.statManager().getRate(_rateName);
+        if (stat != null) {
+            Rate rate = stat.getRate(RATE);
+            if (rate != null)
+                rv = (int) (((float) rate.getAvgOrLifetimeAvg()) / count);
+        }
+        // average from current tunnels
+        int msgs = 0;
+        long dur = 0;
+        long now = _context.clock().now();
+        synchronized (_tunnels) {
+            count = _tunnels.size();
+            if (count > 0) {
+                for (TunnelInfo tun : _tunnels) {
+                    msgs += tun.getProcessedMessagesCount();
+                    long exp = ((TunnelCreatorConfig)tun).getExpiration();
+                    dur += now - (exp - TUNNEL_LIFETIME);
+                }
+            }
+        }
+        // average the two together
+        if (count > 0 && dur > 0) {
+            int rv2 = (int) ((1024L * 1000 * msgs / dur) / count);
+            rv = (rv + rv2) / 2;
+        }
+        return rv;
     }
 
     private void refreshSettings() {
@@ -525,7 +551,9 @@ public class TunnelPool {
 
         _manager.tunnelFailed();
             
-        _lifetimeProcessed += info.getProcessedMessagesCount();
+        synchronized (this) {
+            _lifetimeProcessed += info.getProcessedMessagesCount();
+        }
         updateRate();
         
         long lifetimeConfirmed = info.getVerifiedBytesTransferred();
@@ -603,7 +631,9 @@ public class TunnelPool {
             _log.warn(toString() + ": Tunnel failed: " + cfg);
         _manager.tunnelFailed();
         
-        _lifetimeProcessed += cfg.getProcessedMessagesCount();
+        synchronized (this) {
+            _lifetimeProcessed += cfg.getProcessedMessagesCount();
+        }
         updateRate();
         
         if (_settings.isInbound() && !_settings.isExploratory()) {
@@ -644,12 +674,14 @@ public class TunnelPool {
 
     private void updateRate() {
         long now = _context.clock().now();
-        long et = now - _lastRateUpdate;
-        if (et > 2*60*1000) {
-            long bw = 1024 * (_lifetimeProcessed - _lastLifetimeProcessed) * 1000 / et;   // Bps
-            _context.statManager().addRateData(_rateName, bw);
-            _lastRateUpdate = now;
-            _lastLifetimeProcessed = _lifetimeProcessed;
+        synchronized (this) {
+            long et = now - _lastRateUpdate;
+            if (et > 2*60*1000) {
+                long bw = 1024 * (_lifetimeProcessed - _lastLifetimeProcessed) * 1000 / et;   // Bps
+                _context.statManager().addRateData(_rateName, bw);
+                _lastRateUpdate = now;
+                _lastLifetimeProcessed = _lifetimeProcessed;
+            }
         }
     }
 
@@ -871,7 +903,7 @@ public class TunnelPool {
         return ls;
     }
 
-    public long getLifetimeProcessed() { return _lifetimeProcessed; }
+    public synchronized long getLifetimeProcessed() { return _lifetimeProcessed; }
     
     /**
      * Keep a separate stat for each type, direction, and length of tunnel.
