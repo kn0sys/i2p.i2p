@@ -5,6 +5,7 @@
     <!-- for javaversion condition -->
     <property name="ant.minimumVersion" value="1.10.2"/>
     <property name="java.minimumVersion" value="17"/>
+    <property name="izpack4.maximumJavaVersion" value="13.99"/>
 
     <!-- Include property files so that values can be easily overridden.
          Users should create an override.properties file to make changes.
@@ -13,10 +14,10 @@
     <property file="build.properties"/>
     <!--  When changing, also change javadoc URL in build.properties,
           and checksum in apps/jetty/build.xml
-          and versions in gradle.properties and apps/jetty/build.gradle
+          and versions in gradle.properties
      -->
     <property name="jetty.ver" value="12.0.28" />
-    <property name="jetty.ver.debian" value="12.0.17" />
+    <property name="jetty.ver.debian" value="12.0.32" />
     <property name="tomcat.ver" value="9.0.107" />
 
     <!-- You probably don't want to change anything from here down -->
@@ -464,6 +465,11 @@
         <property name="javac.version" value="17" />
         <property name="javac.release" value="17" />
         <echo message="Building for minimum Java version ${javac.version} release ${javac.release}" />
+    </target>
+
+    <!-- For installer-*-oldjava targets -->
+    <target name="buildProperties-oldjava" depends="getGitRev, getReleaseNumber, getBuildNumber, setBuildTimestamp, disableManifestClasspath" >
+        <property name="full.version" value="${release.number}-${i2p.build.number}${build.qualifier}${build.extra}" />
     </target>
 
     <target name="setBuildTimestamp" unless="${build.reproducible}" >
@@ -962,7 +968,9 @@
                 <pathelement location="core/java/build/libintl.jar" />
                 <pathelement location="core/java/build/gnu-getopt.jar" />
                 <pathelement location="core/java/build/json-simple.jar" />
+                <pathelement location="apps/jetty/jettylib/jetty-apache-jsp.jar" />
                 <pathelement location="apps/jetty/jettylib/jetty-ee.jar" />
+                <pathelement location="apps/jetty/jettylib/jetty-extra.jar" />
                 <pathelement location="apps/jetty/jettylib/slf4j2-api.jar" />
             </classpath>
             <!-- These variables are stored in build.properties.
@@ -1142,8 +1150,8 @@
             </filterchain>
         </loadfile>
         <echo message="Release number: ${release.number}" />
-        <echo message="Izpack version: ${izpack.number}" />
-        <fail message="Izpack version / release version mismatch, fix installer/install.xml" >
+        <echo message="install.xml version: ${izpack.number}" />
+        <fail message="xml version / release version mismatch, fix installer/install.xml" >
             <condition>
                 <not>
                     <equals arg1="${release.number}" arg2="${izpack.number}"/>
@@ -1167,8 +1175,8 @@
             </filterchain>
         </loadfile>
         <echo message="Release number: ${release.number}" />
-        <echo message="Izpack version: ${izpack5.number}" />
-        <fail message="Izpack version / release version mismatch, fix installer/install5.xml" >
+        <echo message="install5.xml version: ${izpack5.number}" />
+        <fail message="xml version / release version mismatch, fix installer/install5.xml" >
             <condition>
                 <not>
                     <equals arg1="${release.number}" arg2="${izpack5.number}"/>
@@ -1259,6 +1267,12 @@
         <delete file="javadoc.zip" />
         <delete file="i2p.fba" />
         <delete file="${sloccount.report.file}" />
+        <delete file="mavencentral-i2p.zip" />
+        <delete file="mavencentral-router.zip" />
+        <delete file="mavencentral-mstreaming.zip" />
+        <delete file="mavencentral-streaming.zip" />
+        <delete file="mavencentral-servlet-i2p.zip" />
+        <!-- clean up old .jar bundles too -->
         <delete file="mavencentral-i2p.jar" />
         <delete file="mavencentral-router.jar" />
         <delete file="mavencentral-mstreaming.jar" />
@@ -1581,18 +1595,18 @@
         </copy>
     </target>
 
-    <target name="copyjetty" depends="copyjetty-unlesspkg" >
+    <target name="copyjetty" depends="copyjetty-unlesspkg, copyjetty-ifpkg" >
         <copy file="build/jetty-i2p.jar" todir="pkg-temp/lib" />
-        <!-- ee8 jars not in libjetty12-java -->
-        <copy file="build/jetty-servlet.jar" todir="pkg-temp/lib" />
-        <copy file="build/jetty-servlets.jar" todir="pkg-temp/lib" />
-        <copy file="build/jetty-webapp.jar" todir="pkg-temp/lib" />
     </target>
 
     <target name="copyjetty-unlesspkg" unless="${with-libjetty12-java}" >
         <copy todir="pkg-temp/lib" >
-            <fileset dir="build" includes="javax.servlet.jar jetty*.jar org.mortbay.*.jar" excludes="jetty-i2p.jar jetty-servlet.jar jetty-servlets.jar jetty-webapp.jar" />
+            <fileset dir="build" includes="javax.servlet.jar jetty*.jar org.mortbay.*.jar" excludes="jetty-i2p.jar" />
         </copy>
+    </target>
+
+    <target name="copyjetty-ifpkg" if="${with-libjetty12-java}" >
+        <copy file="build/jetty-extra.jar" todir="pkg-temp/lib" />
     </target>
 
     <target name="settomcatprop" >
@@ -2000,6 +2014,13 @@
         <echo message="For IzPack 5, install it and use one of the installer5 targets." />
         <echo message="See http://zzz.i2p/topics/3661 for help on installing IzPack 5." />
         <echo message="JDK: ${java.vendor} ${java.version} (${java.runtime.name} ${java.runtime.version})" />
+        <fail message="FATAL: Maximum Java version is ${izpack4.maximumJavaVersion} - your Java version is ${java.version}. Switch to a lower Java version and run ant installer-oldjava, ant installer-linux-oldjava, ant installer-windows-oldjava, or ant installer-nowindows-oldjava" >
+            <condition>
+                <not>
+                    <javaversion atmost="${izpack4.maximumJavaVersion}"/>
+                </not>
+            </condition>
+        </fail>
         <taskdef name="izpack"
                      classpath="${basedir}/installer/lib/izpack/patches.jar:${basedir}/installer/lib/izpack/standalone-compiler.jar"
                      classname="com.izforge.izpack.ant.IzPackTask" />
@@ -2013,6 +2034,13 @@
 
     <!-- IzPack 4 -->
     <target name="installer" depends="preppkg, buildProperties, izpack-patches, buildUtilityJar" >
+        <izpack input="${basedir}/installer/install.xml" output="${basedir}/install.tmp.jar" installerType="standard" basedir="${basedir}" />
+        <move file="${basedir}/install.tmp.jar" tofile="${basedir}/install.jar" />
+        <ant target="installerexe" />
+    </target>
+
+    <target name="installer-oldjava" depends="buildProperties-oldjava, izpack-patches, buildUtilityJar" >
+        <echo message="*** WARNING ***  You must have run 'ant installer' first" />
         <izpack input="${basedir}/installer/install.xml" output="${basedir}/install.tmp.jar" installerType="standard" basedir="${basedir}" />
         <move file="${basedir}/install.tmp.jar" tofile="${basedir}/install.jar" />
         <ant target="installerexe" />
@@ -2110,6 +2138,12 @@
         <izpack input="${basedir}/installer/install.xml" output="${basedir}/i2pinstall_${full.version}.jar" installerType="standard" basedir="${basedir}" />
     </target>
 
+    <target name="installer-nowindows-oldjava" depends="izpack-patches" >
+        <echo message="*** WARNING ***  You must have run 'ant installer-nowindows' first" />
+        <fixcrlf srcdir="pkg-temp" includes="*.config **/*.xml **/*.properties **/*.txt scripts/*" encoding="utf8" eol="lf" />
+        <izpack input="${basedir}/installer/install.xml" output="${basedir}/i2pinstall_${full.version}.jar" installerType="standard" basedir="${basedir}" />
+    </target>
+
     <!-- IzPack 5 -->
     <target name="installer5-nowindows" depends="clean, izpack5-patches, preppkg-nowindows" >
         <fixcrlf srcdir="pkg-temp" includes="*.config **/*.xml **/*.properties **/*.txt scripts/*" encoding="utf8" eol="lf" />
@@ -2124,6 +2158,12 @@
 
     <!-- IzPack 4 -->
     <target name="installer-linux" depends="clean, preppkg-linux-only, izpack-patches" >
+        <fixcrlf srcdir="pkg-temp" includes="*.config **/*.xml **/*.properties **/*.txt scripts/*" encoding="utf8" eol="lf" />
+        <izpack input="${basedir}/installer/install.xml" output="${basedir}/i2pinstall_${full.version}_linux-only.jar" installerType="standard" basedir="${basedir}" />
+    </target>
+
+    <target name="installer-linux-oldjava" depends="buildProperties-oldjava, izpack-patches" >
+        <echo message="*** WARNING ***  You must have run 'ant installer-linux' first" />
         <fixcrlf srcdir="pkg-temp" includes="*.config **/*.xml **/*.properties **/*.txt scripts/*" encoding="utf8" eol="lf" />
         <izpack input="${basedir}/installer/install.xml" output="${basedir}/i2pinstall_${full.version}_linux-only.jar" installerType="standard" basedir="${basedir}" />
     </target>
@@ -2179,6 +2219,16 @@
 
     <!-- IzPack 4 -->
     <target name="installer-windows" depends="clean, preppkg-windows-only, izpack-patches, buildUtilityJar" >
+        <fixcrlf srcdir="pkg-temp" includes="*.config *.bat *.cmd **/*.xml **/*.properties **/*.txt scripts/*" encoding="utf8" eol="crlf"/>
+        <izpack input="${basedir}/installer/install.xml" output="${basedir}/install.tmp.jar" installerType="standard" basedir="${basedir}" />
+        <move file="${basedir}/install.tmp.jar" tofile="${basedir}/install.jar" />
+        <ant target="installerexe" />
+        <delete file="${basedir}/install.jar" />
+        <move file="${basedir}/i2pinstall.exe" tofile="${basedir}/i2pinstall_${full.version}_windows.exe" />
+    </target>
+
+    <target name="installer-windows-oldjava" depends="buildProperties-oldjava, izpack-patches, buildUtilityJar" >
+        <echo message="*** WARNING ***  You must have run 'ant installer-windows' first" />
         <fixcrlf srcdir="pkg-temp" includes="*.config *.bat *.cmd **/*.xml **/*.properties **/*.txt scripts/*" encoding="utf8" eol="crlf"/>
         <izpack input="${basedir}/installer/install.xml" output="${basedir}/install.tmp.jar" installerType="standard" basedir="${basedir}" />
         <move file="${basedir}/install.tmp.jar" tofile="${basedir}/install.jar" />
@@ -2656,6 +2706,13 @@
         <artifact:writepom pomRefId="mstreamingpom" file="pkg-mavencentral/mstreaming-${release.number}.pom" />
         <artifact:writepom pomRefId="streamingpom" file="pkg-mavencentral/streaming-${release.number}.pom" />
         <artifact:writepom pomRefId="servletpom" file="pkg-mavencentral/servlet-i2p-${release.number}.pom" />
+        <!-- Checksums - Sonatype requires md5 and sha1 for every artifact -->
+        <checksum algorithm="MD5" fileext=".md5">
+            <fileset dir="pkg-mavencentral" excludes="*.md5 *.sha1 *.asc" />
+        </checksum>
+        <checksum algorithm="SHA-1" fileext=".sha1">
+            <fileset dir="pkg-mavencentral" excludes="*.md5 *.sha1 *.asc" />
+        </checksum>
         <!-- Signatures -->
         <echo message="Sign the files:" />
         <input message="Enter GPG key ID (e.g. 0x12345678) for signing:" addproperty="release.gpg.keyid" />
@@ -2685,33 +2742,35 @@
         <gpgsignasc file="pkg-mavencentral/servlet-i2p-${release.number}.pom" />
         <gpgsignasc file="pkg-mavencentral/servlet-i2p-${release.number}-javadoc.jar" />
         <gpgsignasc file="pkg-mavencentral/servlet-i2p-${release.number}-sources.jar" />
-        <!-- Bundle -->
-        <jar destfile="mavencentral-i2p.jar">
-            <fileset dir="./pkg-mavencentral">
+        <!-- Bundle - use zip not jar, to avoid META-INF which causes Sonatype validation errors.
+             Files must be placed in Maven repository directory layout (groupId/artifactId/version/)
+             for the Sonatype Central Portal to accept them. -->
+        <zip destfile="mavencentral-i2p.zip">
+            <zipfileset dir="./pkg-mavencentral" prefix="net/i2p/i2p/${release.number}">
                 <include name="i2p-*" />
-            </fileset>
-        </jar>
-        <jar destfile="mavencentral-router.jar">
-            <fileset dir="./pkg-mavencentral">
+            </zipfileset>
+        </zip>
+        <zip destfile="mavencentral-router.zip">
+            <zipfileset dir="./pkg-mavencentral" prefix="net/i2p/router/${release.number}">
                 <include name="router-*" />
-            </fileset>
-        </jar>
-        <jar destfile="mavencentral-mstreaming.jar">
-            <fileset dir="./pkg-mavencentral">
+            </zipfileset>
+        </zip>
+        <zip destfile="mavencentral-mstreaming.zip">
+            <zipfileset dir="./pkg-mavencentral" prefix="net/i2p/client/mstreaming/${release.number}">
                 <include name="mstreaming-*" />
-            </fileset>
-        </jar>
-        <jar destfile="mavencentral-streaming.jar">
-            <fileset dir="./pkg-mavencentral">
+            </zipfileset>
+        </zip>
+        <zip destfile="mavencentral-streaming.zip">
+            <zipfileset dir="./pkg-mavencentral" prefix="net/i2p/client/streaming/${release.number}">
                 <include name="streaming-*" />
-            </fileset>
-        </jar>
-        <jar destfile="mavencentral-servlet-i2p.jar">
-            <fileset dir="./pkg-mavencentral">
+            </zipfileset>
+        </zip>
+        <zip destfile="mavencentral-servlet-i2p.zip">
+            <zipfileset dir="./pkg-mavencentral" prefix="net/i2p/servlet-i2p/${release.number}">
                 <include name="servlet-i2p-*" />
-            </fileset>
-        </jar>
-        <echo message="Now upload mavencentral-*.jar to Maven Central." />
+            </zipfileset>
+        </zip>
+        <echo message="Now upload mavencentral-*.zip to Maven Central." />
     </target>
 
     <target name="mavenLocal.deps" depends="buildRouter, buildStreaming">
