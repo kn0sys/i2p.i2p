@@ -47,7 +47,7 @@ class MLKEMDHState implements DHState, Cloneable {
 	 *  Bob local/remote or Alice remote side, do not call generateKeyPair()
 	 *  @param isAlice true for Bob remote side, false for Bob local side and Alice remote side
 	 */
-	public MLKEMDHState(boolean isAlice, String patternId)
+	public MLKEMDHState(boolean isAlice, NoiseInit.PatternID patternId)
 	{
 		this(isAlice, null, patternId);
 	}
@@ -55,7 +55,7 @@ class MLKEMDHState implements DHState, Cloneable {
 	/**
 	 *  Alice local side
 	 */
-	public MLKEMDHState(KeyFactory hdh, String patternId)
+	public MLKEMDHState(KeyFactory hdh, NoiseInit.PatternID patternId)
 	{
 		this(true, hdh, patternId);
 	}
@@ -63,20 +63,27 @@ class MLKEMDHState implements DHState, Cloneable {
 	/**
 	 *  Internal
 	 */
-	private MLKEMDHState(boolean isAlice, KeyFactory hdh, String patternId)
+	private MLKEMDHState(boolean isAlice, KeyFactory hdh, NoiseInit.PatternID patternId)
 	{
-		if (patternId.equals(HandshakeState.PATTERN_ID_IKHFS_512) ||
-		    patternId.equals(HandshakeState.PATTERN_ID_XKHFS_512) ||
-		    patternId.equals(HandshakeState.PATTERN_ID_XKHFS_512_SSU2)) {
+		switch (patternId) {
+		    case IKHFS_512:
+		    case XKHFS_512:
+		    case XKHFS_512_SSU2:
 			type = isAlice ? EncType.MLKEM512_X25519_INT : EncType.MLKEM512_X25519_CT;
-		} else if (patternId.equals(HandshakeState.PATTERN_ID_IKHFS_768) ||
-                           patternId.equals(HandshakeState.PATTERN_ID_XKHFS_768) ||
-                           patternId.equals(HandshakeState.PATTERN_ID_XKHFS_768_SSU2)) {
+			break;
+
+		    case IKHFS_768:
+		    case XKHFS_768:
+		    case XKHFS_768_SSU2:
 			type = isAlice ? EncType.MLKEM768_X25519_INT : EncType.MLKEM768_X25519_CT;
-		} else if (patternId.equals(HandshakeState.PATTERN_ID_IKHFS_1024) ||
-                           patternId.equals(HandshakeState.PATTERN_ID_XKHFS_1024)) {
+			break;
+
+		    case IKHFS_1024:
+		    case XKHFS_1024:
 			type = isAlice ? EncType.MLKEM1024_X25519_INT : EncType.MLKEM1024_X25519_CT;
-		} else {
+			break;
+
+		    default:
 			throw new IllegalArgumentException("Handshake pattern is not recognized");
 		}
 		publicKey = new byte [type.getPubkeyLen()];
@@ -229,31 +236,27 @@ class MLKEMDHState implements DHState, Cloneable {
 	 *  Side effect: If we are Bob, copies the ciphertext to our public key
 	 *  so it may be written out in the message.
 	 *
-	 *  @throws IllegalArgumentException on bad public key modulus
+	 *  @throws GeneralSecurityException on bad public key modulus
 	 */
 	@Override
-	public void calculate(byte[] sharedKey, int offset, DHState publicDH) {
+	public void calculate(byte[] sharedKey, int offset, DHState publicDH) throws GeneralSecurityException {
 		if (!(publicDH instanceof MLKEMDHState))
 			throw new IllegalArgumentException("Incompatible DH algorithms");
-		try {
-			if (hasPrivateKey()) {
-				// we are Alice
-				byte[] sk = MLKEM.decaps(type, ((MLKEMDHState)publicDH).publicKey, privateKey);
-				System.arraycopy(sk, 0, sharedKey, offset, sk.length);
-			} else if (!hasPublicKey()) {
-				// we are Bob
-				byte[][] rv = MLKEM.encaps(type, ((MLKEMDHState)publicDH).publicKey);
-				byte[] ct = rv[0];
-				byte[] sk = rv[1];
-				System.arraycopy(sk, 0, sharedKey, offset, sk.length);
-				setPublicKey(ct, 0);
-			} else {
-				throw new IllegalStateException();
-			}
-			//System.out.println("Calculated shared PQ key: " + net.i2p.data.Base64.encode(sharedKey, offset, 32));
-		} catch (GeneralSecurityException gse) {
-			throw new IllegalArgumentException(gse);
+		if (hasPrivateKey()) {
+			// we are Alice
+			byte[] sk = MLKEM.decaps(type, ((MLKEMDHState)publicDH).publicKey, privateKey);
+			System.arraycopy(sk, 0, sharedKey, offset, sk.length);
+		} else if (!hasPublicKey()) {
+			// we are Bob
+			byte[][] rv = MLKEM.encaps(type, ((MLKEMDHState)publicDH).publicKey);
+			byte[] ct = rv[0];
+			byte[] sk = rv[1];
+			System.arraycopy(sk, 0, sharedKey, offset, sk.length);
+			setPublicKey(ct, 0);
+		} else {
+			throw new IllegalStateException();
 		}
+		//System.out.println("Calculated shared PQ key: " + net.i2p.data.Base64.encode(sharedKey, offset, 32));
 	}
 
 	@Override

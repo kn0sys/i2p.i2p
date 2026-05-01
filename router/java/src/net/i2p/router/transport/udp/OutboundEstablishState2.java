@@ -15,8 +15,11 @@ import com.southernstorm.noise.protocol.ChaChaPolyCipherState;
 import com.southernstorm.noise.protocol.CipherState;
 import com.southernstorm.noise.protocol.CipherStatePair;
 import com.southernstorm.noise.protocol.HandshakeState;
+import com.southernstorm.noise.protocol.NoiseInit;
 
+import net.i2p.crypto.EncType;
 import net.i2p.crypto.HKDF;
+import net.i2p.crypto.KeyFactory;
 import net.i2p.data.Base64;
 import net.i2p.data.DataFormatException;
 import net.i2p.data.DataHelper;
@@ -48,6 +51,7 @@ class OutboundEstablishState2 extends OutboundEstablishState implements SSU2Payl
     private final long _rcvConnID;
     private final RouterAddress _routerAddress;
     private final Map<Hash, IntroState> _introducers;
+    private final int _version;
     private long _token;
     private HandshakeState _handshakeState;
     // Bob's intro key, same for send and receive
@@ -137,7 +141,7 @@ class OutboundEstablishState2 extends OutboundEstablishState implements SSU2Payl
     public OutboundEstablishState2(RouterContext ctx, UDPTransport transport, RemoteHostId claimedAddress,
                                    RemoteHostId remoteHostId, RouterIdentity remotePeer,
                                    boolean needIntroduction,
-                                   SessionKey introKey, RouterAddress ra, UDPAddress addr) throws IllegalArgumentException {
+                                   SessionKey introKey, RouterAddress ra, UDPAddress addr, int version) throws IllegalArgumentException {
         super(ctx, claimedAddress, remoteHostId, remotePeer, needIntroduction, introKey, addr);
         _transport = transport;
         if (claimedAddress != null) {
@@ -173,6 +177,7 @@ class OutboundEstablishState2 extends OutboundEstablishState implements SSU2Payl
         }
         _mtu = mtu;
         _routerAddress = ra;
+        _version = version;
         int intros = addr.getIntroducerCount();
         if (intros > 0) {
             _currentState = OutboundState.OB_STATE_PENDING_INTRO;
@@ -266,7 +271,28 @@ class OutboundEstablishState2 extends OutboundEstablishState implements SSU2Payl
         if (publicKey.length != 32)
             throw new IllegalArgumentException("bad SSU2 S len");
         try {
-            _handshakeState = new HandshakeState(HandshakeState.PATTERN_ID_XK_SSU2, HandshakeState.INITIATOR, _transport.getXDHFactory());
+            NoiseInit.PatternID pattern;
+            KeyFactory hkf;
+            switch (_version) {
+                case 2:
+                    pattern = NoiseInit.PatternID.XK_SSU2;
+                    _handshakeState = new HandshakeState(pattern, HandshakeState.INITIATOR, _transport.getXDHFactory());
+                    break;
+                case 3:
+                    pattern = NoiseInit.PatternID.XKHFS_512_SSU2;
+                    //len += MAC_SIZE + EncType.MLKEM512_X25519_INT.getPubkeyLen();
+                    hkf = _context.eciesEngine().getHybridKeyFactory(EncType.MLKEM512_X25519);
+                    _handshakeState = new HandshakeState(pattern, HandshakeState.INITIATOR, _transport.getXDHFactory(), hkf);
+                    break;
+                case 4:
+                    pattern = NoiseInit.PatternID.XKHFS_768_SSU2;
+                    //len += MAC_SIZE + EncType.MLKEM768_X25519_INT.getPubkeyLen();
+                    hkf = _context.eciesEngine().getHybridKeyFactory(EncType.MLKEM768_X25519);
+                    _handshakeState = new HandshakeState(pattern, HandshakeState.INITIATOR, _transport.getXDHFactory(), hkf);
+                    break;
+                default:
+                    throw new IllegalArgumentException("Bad version " + _version);
+            }
         } catch (GeneralSecurityException gse) {
             throw new IllegalStateException("bad proto", gse);
         }
@@ -462,7 +488,7 @@ class OutboundEstablishState2 extends OutboundEstablishState implements SSU2Payl
     // SSU 2 things
 
     @Override
-    public int getVersion() { return 2; }
+    public int getVersion() { return _version; }
     public long getSendConnID() { return _sendConnID; }
     public long getRcvConnID() { return _rcvConnID; }
     public long getToken() { return _token; }
@@ -488,14 +514,15 @@ class OutboundEstablishState2 extends OutboundEstablishState implements SSU2Payl
     /**
      *  What is the largest packet we can send to the peer?
      *  Only used for Session Confirmed packets.
-     *  Session Request is very small.
+     *  Session Request is very small (except for MLKEM768).
      */
     public int getMTU() {
         // To avoid PMTU problems on brokered IPv6 tunnels, make it the minimum.
         // Data phase will probe and increase if possible
-        if (_bobIP == null || _bobIP.length == 16)
+        if ((_bobIP == null || _bobIP.length == 16) && _version != 4)
             return PeerState2.MIN_MTU;
-        return _mtu;
+        boolean ipv6 = _bobIP != null && _bobIP.length == 16;
+        return Math.min(_mtu, _transport.getMTU(ipv6));
     }
 
     public synchronized void receiveRetry(UDPPacket packet) throws GeneralSecurityException {
@@ -538,6 +565,9 @@ class OutboundEstablishState2 extends OutboundEstablishState implements SSU2Payl
                 _token = token;
             }
         }
+        int version = data[off + VERSION_OFFSET] & 0xff;
+        if (version != _version && _log.shouldWarn())
+            _log.warn("Incoming retry version mismatch was " + _version + " now " + version);
         _timeReceived = 0;
         ChaChaPolyCipherState chacha = new ChaChaPolyCipherState();
         chacha.initializeKey(_headerEncryptKey1, 0);
@@ -629,6 +659,9 @@ class OutboundEstablishState2 extends OutboundEstablishState implements SSU2Payl
         long sid = DataHelper.fromLong8(data, off + SRC_CONN_ID_OFFSET);
         if (sid != _sendConnID)
             throw new GeneralSecurityException("Conn ID mismatch: 1: " + _sendConnID + " 2: " + sid);
+        int version = data[off + VERSION_OFFSET] & 0xff;
+        if (version != _version && _log.shouldWarn())
+            _log.warn("Incoming session created version mismatch was " + _version + " now " + version);
 
         _handshakeState.mixHash(data, off, LONG_HEADER_SIZE);
         //if (_log.shouldDebug())
@@ -639,7 +672,20 @@ class OutboundEstablishState2 extends OutboundEstablishState implements SSU2Payl
         //if (_log.shouldDebug())
         //    _log.debug("State after sess cr: " + _handshakeState);
         _timeReceived = 0;
-        processPayload(data, off + LONG_HEADER_SIZE, len - (LONG_HEADER_SIZE + KEY_LEN + MAC_LEN), true);
+        int overhead = LONG_HEADER_SIZE + KEY_LEN + MAC_LEN;
+        switch (_version) {
+            case 2:
+                break;
+            case 3:
+                overhead += MAC_LEN + EncType.MLKEM512_X25519_CT.getPubkeyLen();
+                break;
+            case 4:
+                overhead += MAC_LEN + EncType.MLKEM768_X25519_CT.getPubkeyLen();
+                break;
+            default:
+                throw new IllegalArgumentException("Bad version " + _version);
+        }
+        processPayload(data, off + LONG_HEADER_SIZE, len - overhead, true);
         packetReceived();
         if (_currentState == OutboundState.OB_STATE_VALIDATION_FAILED) {
             // termination block received
@@ -739,6 +785,7 @@ class OutboundEstablishState2 extends OutboundEstablishState implements SSU2Payl
             if (_rcvHeaderEncryptKey2 == null)
                 _rcvHeaderEncryptKey2 = SSU2Util.hkdf(_context, _handshakeState.getChainingKey(), "SessCreateHeader");
 
+
             // split()
             // The CipherStates are from d_ab/d_ba,
             // not from k_ab/k_ba, so there's no use for
@@ -783,7 +830,7 @@ class OutboundEstablishState2 extends OutboundEstablishState implements SSU2Payl
                                      _remotePeer.calculateHash(),
                                      false, _rtt, sender, rcvr,
                                      _sendConnID, _rcvConnID,
-                                     _headerEncryptKey1, h_ab, h_ba);
+                                     _headerEncryptKey1, h_ab, h_ba, _version);
             _currentState = OutboundState.OB_STATE_CONFIRMED_COMPLETELY;
             _pstate.confirmedPacketsSent(_sessConfForReTX);
             // PS2.super adds CLOCK_SKEW_FUDGE that doesn't apply here
@@ -867,7 +914,7 @@ class OutboundEstablishState2 extends OutboundEstablishState implements SSU2Payl
 
     @Override
     public String toString() {
-        return "OES2 " + _remotePeer.getHash().toBase64().substring(0, 6) + ' ' + _remoteHostId +
+        return "OES" + _version + ' ' + _remotePeer.getHash().toBase64().substring(0, 6) + ' ' + _remoteHostId +
                " lifetime: " + DataHelper.formatDuration(getLifetime()) +
                " Rcv ID: " + _rcvConnID +
                " Send ID: " + _sendConnID +

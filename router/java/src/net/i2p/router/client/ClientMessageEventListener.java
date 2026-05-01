@@ -416,6 +416,7 @@ class ClientMessageEventListener implements I2CPMessageReader.I2CPMessageEventLi
             if (!mgr.checkHash(PROP_AUTH, user, pw)) {
                 String msg = "I2CP authentication failed, user: " + user + " IP: " + _runner.getAddress();
                 _log.logAlways(Log.WARN, msg);
+                try { Thread.sleep(3000); } catch (InterruptedException ie) {}
                 _runner.disconnectClient(msg);
                 _authorized = false;
                 return false;
@@ -766,8 +767,9 @@ class ClientMessageEventListener implements I2CPMessageReader.I2CPMessageEventLi
             // h may still be null, an LS lookup for b32 will go out expl. tunnels
         }
         _context.jobQueue().addJob(new LookupDestJob(_context, _runner, message.getReqID(),
-                                                     message.getTimeout(), sid,
-                                                     message.getHash(), message.getHostname(), h));
+                                                     message.getTimeout(), sid, message.getLookupType(),
+                                                     message.getHash(), message.getHostname(),
+                                                     message.getDestination(), h));
     }
 
     /**
