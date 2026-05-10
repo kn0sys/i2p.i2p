@@ -6,9 +6,6 @@
 <%=intl.title("home")%>
 <%@include file="summaryajax.jsi" %>
 </head><body>
-<%
-    String consoleNonce = net.i2p.router.web.CSSHelper.getNonce();
-%>
 <jsp:useBean class="net.i2p.router.web.NewsHelper" id="newshelper" scope="request" />
 <jsp:setProperty name="newshelper" property="contextId" value="<%=i2pcontextId%>" />
 <%
@@ -16,8 +13,9 @@
 %>
  <jsp:setProperty name="newshelper" property="page" value="<%=fpath.getAbsolutePath()%>" />
  <jsp:setProperty name="newshelper" property="maxLines" value="300" />
- <jsp:useBean class="net.i2p.router.web.ConfigUpdateHelper" id="updatehelper" scope="request" />
- <jsp:setProperty name="updatehelper" property="contextId" value="<%=i2pcontextId%>" />
+ <jsp:useBean class="net.i2p.router.web.ConfigUpdateHelper" id="updatehelper" scope="request" /><%
+    updatehelper.storeSession(session);
+%><jsp:setProperty name="updatehelper" property="contextId" value="<%=i2pcontextId%>" />
 
 <div class="routersummaryouter">
  <div class="routersummary">

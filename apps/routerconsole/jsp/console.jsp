@@ -7,9 +7,6 @@
 <%=intl.title("home")%>
 <%@include file="summaryajax.jsi" %>
 </head><body>
-<%
-    String consoleNonce = net.i2p.router.web.CSSHelper.getNonce();
-%>
 <%@include file="summary.jsi" %>
 <h1><%=intl._t("I2P Router Console")%></h1>
 <div class="news" id="news">
@@ -21,8 +18,9 @@
 <%
    }  // shouldShowNews()
 %>
- <jsp:useBean class="net.i2p.router.web.ConfigUpdateHelper" id="updatehelper" scope="request" />
- <jsp:setProperty name="updatehelper" property="contextId" value="<%=i2pcontextId%>" />
+ <jsp:useBean class="net.i2p.router.web.ConfigUpdateHelper" id="updatehelper" scope="request" /><%
+    updatehelper.storeSession(session);
+%><jsp:setProperty name="updatehelper" property="contextId" value="<%=i2pcontextId%>" />
  <jsp:getProperty name="updatehelper" property="newsStatus" /><br>
 </div><div class="main" id="console">
  <jsp:useBean class="net.i2p.router.web.helpers.ResourceHelper" id="contenthelper" scope="request" />

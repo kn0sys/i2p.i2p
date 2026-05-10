@@ -1,6 +1,4 @@
 <%
-    // NOTE: Do the header carefully so there is no whitespace before the <?xml... line
-
     String cspNonce = Integer.toHexString(net.i2p.util.RandomSource.getInstance().nextInt());
 
     response.setHeader("X-Frame-Options", "SAMEORIGIN");
@@ -30,10 +28,11 @@ if (tun != null) {
   String type = request.getParameter("type");
   __isClient = EditBean.isClient(type);
 }
-%><?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE html>
-<jsp:useBean class="net.i2p.i2ptunnel.web.EditBean" id="editBean" scope="request" />
-<jsp:useBean class="net.i2p.i2ptunnel.ui.Messages" id="intl" scope="request" />
+%><!DOCTYPE html>
+<jsp:useBean class="net.i2p.i2ptunnel.web.EditBean" id="editBean" scope="request" /><%
+    editBean.storeMethod(request.getMethod());
+    editBean.storeSession(session);
+%><jsp:useBean class="net.i2p.i2ptunnel.ui.Messages" id="intl" scope="request" />
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
     <title><%=intl._t("Hidden Services Manager")%> - <%=(__isClient ? intl._t("Edit Client Tunnel") : intl._t("Edit Hidden Service"))%></title>

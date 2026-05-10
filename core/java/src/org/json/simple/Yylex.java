@@ -436,7 +436,7 @@ int getPosition(){
 
 
   /**
-   * Returns the character at position <code>pos</code> from the 
+   * Returns the character at position <code>pos</code> from the
    * matched text. 
    * 
    * It is equivalent to yytext().charAt(pos), but faster
