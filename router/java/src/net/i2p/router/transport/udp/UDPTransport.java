@@ -90,6 +90,7 @@ public class UDPTransport extends TransportImpl {
     private final PeerTestEvent _testEvent;
     private Status _reachabilityStatus;
     private Status _reachabilityStatusPending;
+    private int _reachabilityStatusPendingCount;
     // only for logging, to be removed
     private long _reachabilityStatusLastUpdated;
     private int _reachabilityStatusUnchanged;
@@ -130,6 +131,7 @@ public class UDPTransport extends TransportImpl {
 
     /** last report from a peer of our IP */
     private Hash _lastFromv4, _lastFromv6;
+    private byte[] _lastFromIPv4, _lastFromIPv6;
     private byte[] _lastOurIPv4, _lastOurIPv6;
     private int _lastOurPortv4, _lastOurPortv6;
     private boolean _haveUPnP;
@@ -245,8 +247,16 @@ public class UDPTransport extends TransportImpl {
     /** minimum peers volunteering to be introducers if we need that */
     private static final int MIN_INTRODUCER_POOL = 5;
     static final long INTRODUCER_EXPIRATION_MARGIN = 20*60*1000L;
-    private static final long MIN_DOWNTIME_TO_REKEY = 30*24*60*60*1000L;
+    private static final long MIN_DOWNTIME_TO_REKEY = 7*24*60*60*1000L;
     
+    /**
+     *  Number of confirmations for state change
+     *  see locked_setReachabilityStatus
+     *  require more for IPv6 due to false negatives
+     */
+    private static final int REACHABILITY_PEERS_IPV4 = 2;
+    private static final int REACHABILITY_PEERS_IPV6 = 3;
+
     private static final int[] BID_VALUES = { 15, 20, 50, 65, 80, 95, 100, 115, TransportBid.TRANSIENT_FAIL };
     private static final int FAST_PREFERRED_BID = 0;
     private static final int SLOW_PREFERRED_BID = 1;
@@ -1341,7 +1351,7 @@ public class UDPTransport extends TransportImpl {
      * @param ourIP publicly routable IPv4 or IPv6 only, non-null
      * @param ourPort &gt;= 1024
      */
-    void externalAddressReceived(Hash from, byte ourIP[], int ourPort) {
+    void externalAddressReceived(Hash from, byte[] hisIP, byte[] ourIP, int ourPort) {
         boolean isValid = isValid(ourIP) &&
                           TransportUtil.isValidPort(ourPort);
         boolean explicitSpecified = explicitAddressSpecified();
@@ -1396,36 +1406,48 @@ public class UDPTransport extends TransportImpl {
             Hash lastFrom = null;
             synchronized(this) {
                 if (!isIPv6) {
-                    if (from.equals(_lastFromv4) || !eq(_lastOurIPv4, _lastOurPortv4, ourIP, ourPort)) {
+                    if (from.equals(_lastFromv4))
+                        return;
+                    if (!eq(_lastOurIPv4, _lastOurPortv4, ourIP, ourPort)) {
                         if (_log.shouldLog(Log.INFO))
-                            _log.info("The router " + from + " told us we have a new IP/port - " 
+                            _log.info("The router " + from + " at IP " + Addresses.toString(hisIP) + " told us we have a new IP/port - " 
                                       + Addresses.toString(ourIP, ourPort) + ".  Wait until somebody else tells us the same thing.");
                     } else {
-                        changeIt = true;
-                        lastFrom = _lastFromv4;
+                        // enforce different /16
+                        if (!DataHelper.eq(_lastFromIPv4, 0, hisIP, 0, 2)) {
+                            changeIt = true;
+                            lastFrom = _lastFromv4;
+                        }
                     }
                     _lastFromv4 = from;
+                    _lastFromIPv4 = hisIP;
                     _lastOurIPv4 = ourIP;
                     _lastOurPortv4 = ourPort;
                 } else {
-                    if (from.equals(_lastFromv6) || !eq(_lastOurIPv6, _lastOurPortv6, ourIP, ourPort)) {
+                    if (from.equals(_lastFromv6))
+                        return;
+                    if (!eq(_lastOurIPv6, _lastOurPortv6, ourIP, ourPort)) {
                         if (_log.shouldLog(Log.INFO))
-                            _log.info("The router " + from + " told us we have a new IP/port - " 
+                            _log.info("The router " + from + " at IP " + Addresses.toString(hisIP) + " told us we have a new IP/port - " 
                                       + Addresses.toString(ourIP, ourPort) + ".  Wait until somebody else tells us the same thing.");
                     } else {
-                        changeIt = true;
-                        lastFrom = _lastFromv6;
+                        // enforce different /32
+                        if (!DataHelper.eq(_lastFromIPv6, 0, hisIP, 0, 4)) {
+                            changeIt = true;
+                            lastFrom = _lastFromv6;
+                        }
                     }
                     _lastFromv6 = from;
+                    _lastFromIPv6 = hisIP;
                     _lastOurIPv6 = ourIP;
                     _lastOurPortv6 = ourPort;
                 }
             }
             if (changeIt) {
                 if (_log.shouldInfo())
-                    _log.info(from + " and " + lastFrom + " agree our address is " + Addresses.toString(ourIP, ourPort));
+                    _log.info(from + " at IP " + Addresses.toString(hisIP) + " and " + lastFrom + " agree our address is " + Addresses.toString(ourIP, ourPort));
                 // Never change port for IPv6 or if we have UPnP
-                if (_haveUPnP || ourIP.length == 16)
+                if (_haveUPnP || isIPv6)
                     ourPort = 0;
                 changeAddress(ourIP, ourPort);
             }
@@ -3940,7 +3962,7 @@ public class UDPTransport extends TransportImpl {
             }
 
             if (status != old) {
-                // for the following transitions ONLY, require two in a row
+                // for the following transitions ONLY, require two (IPv4) or three (IPv6) in a row
                 // to prevent thrashing
                 if ((STATUS_OK.contains(old) && STATUS_FW.contains(status)) ||
                     (STATUS_OK.contains(status) && STATUS_FW.contains(old)) ||
@@ -3951,16 +3973,27 @@ public class UDPTransport extends TransportImpl {
                             _log.warn("Old status: " + old + " status pending confirmation: " + status +
                                       " Caused by update: " + newStatus);
                         _reachabilityStatusPending = status;
+                        _reachabilityStatusPendingCount = 1;
+                        _testEvent.forceRunSoon(isIPv6);
+                        return;
+                    }
+                    int reqd = isIPv6 ? REACHABILITY_PEERS_IPV6 : REACHABILITY_PEERS_IPV4;
+                    if (++_reachabilityStatusPendingCount < reqd) {
+                        if (_log.shouldWarn())
+                            _log.warn("Old status: " + old + " status pending confirmation: " + status + " ipv6? " + isIPv6 +
+                                      " confirmations: " + _reachabilityStatusPendingCount + " required: " + reqd);
                         _testEvent.forceRunSoon(isIPv6);
                         return;
                     }
                 }
                 _reachabilityStatusUnchanged = 0;
                 long now = _context.clock().now();
+                _reachabilityStatusPendingCount = 0;
                 _reachabilityStatusLastUpdated = now;
                 _reachabilityStatus = status;
             } else {
                 _reachabilityStatusUnchanged++;
+                _reachabilityStatusPendingCount = 0;
             }
             _reachabilityStatusPending = status;
         }

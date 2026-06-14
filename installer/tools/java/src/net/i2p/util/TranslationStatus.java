@@ -155,7 +155,7 @@ public class TranslationStatus {
             for (String name : classes) {
                 name = name.substring(0, name.length() - 6);  // .class
                 int c = name.indexOf('_');
-                String clz = name.substring(0, c).replace("/", ".");
+                String clz = name.substring(0, c).replace('/', '.');
                 if (!clz.equals(pclz)) {
                     // pass 1C: output a table for the resource
                     // output goes here, we have to make two passes to find the max
@@ -177,11 +177,11 @@ public class TranslationStatus {
                 if (c < 0) {
                     lang = s;
                     country = null;
-                    loc = new Locale(lang);
+                    loc = Locale.forLanguageTag(lang);
                 } else {
                     lang = s.substring(0, c);
                     country = s.substring(c + 1);
-                    loc = new Locale(lang, country);
+                    loc = Locale.forLanguageTag(s.replace('_', '-'));
                 }
                 foundLangs.add(loc);
                 ResourceBundle bun;
@@ -338,11 +338,11 @@ public class TranslationStatus {
                 if (c < 0) {
                     lang = s;
                     country = "";
-                    loc = new Locale(lang);
+                    loc = Locale.forLanguageTag(lang);
                 } else {
                     lang = s.substring(0, c);
                     country = s.substring(c + 1);
-                    loc = new Locale(lang, country);
+                    loc = Locale.forLanguageTag(s.replace('_', '-'));
                     country = " (" + loc.getDisplayCountry() + ')';
                 }
                 String dlang = loc.getDisplayLanguage();
@@ -410,11 +410,11 @@ public class TranslationStatus {
                 if (c < 0) {
                     lang = lg;
                     country = "";
-                    loc = new Locale(lang);
+                    loc = Locale.forLanguageTag(lang);
                 } else {
                     lang = lg.substring(0, c);
                     country = lg.substring(c + 1);
-                    loc = new Locale(lang, country);
+                    loc = Locale.forLanguageTag(lg.replace('_', '-'));
                     country = " (" + loc.getDisplayCountry() + ')';
                 }
                 String dlang = loc.getDisplayLanguage();

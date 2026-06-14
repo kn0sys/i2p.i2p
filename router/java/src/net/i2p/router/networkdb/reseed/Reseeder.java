@@ -116,6 +116,7 @@ public class Reseeder {
         //
         // https url:port, ending with "/"              // certificates/reseed/      // certificates/ssl/          // notes
         // ----------------------------------           ------------------------     -------------------------     ---------------
+        "https://spiral.likogan.dev/"         + ',' +   // admin_at_likogan.dev.crt  // CA
         "https://reseed.sahil.world/"         + ',' +   // sahil_at_mail.i2p.crt  // CA
         "https://i2p.diyarciftci.xyz/"        + ',' +   // diyarciftci_at_protonmail.com.crt  // CA
         //"https://cubicchaos.net:8443/"        + ',' +   // unixeno_at_cubicchaos.net.crt   // cubicchaos.net.crt
@@ -852,7 +853,8 @@ public class Reseeder {
             try {
                 SU3File su3 = new SU3File(_context, contentRaw);
                 zip = new File(_context.getTempDir(), "reseed-" + _context.random().nextInt() + ".zip");
-                su3.verifyAndMigrate(zip);
+                if (!su3.verifyAndMigrate(zip))
+                    throw new IOException("Bad signature");
                 int type = su3.getContentType();
                 if (type != SU3File.CONTENT_RESEED)
                     throw new IOException("Bad content type " + type);
@@ -1292,7 +1294,8 @@ public class Reseeder {
                         SU3File su3f = new SU3File(su3);
                         File zip = new File(host + ".zip");
                         zip.delete();
-                        su3f.verifyAndMigrate(zip);
+                        if (!su3f.verifyAndMigrate(zip))
+                            throw new IOException("Bad signature");
                         SU3File.main(new String[] {"showversion", su3.getPath()});
                         String version = su3f.getVersionString();
                         long ver = Long.parseLong(version.trim()) * 1000;
