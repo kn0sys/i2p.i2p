@@ -62,13 +62,20 @@ public class GarlicMessageParser {
                 decrData = _context.elGamalAESEngine().decrypt(encData, encryptionKey, skm);
             } else if (type == EncType.ECIES_X25519) {
                 RatchetSKM rskm;
-                if (skm instanceof RatchetSKM) {
+                switch (skm.getSKMType()) {
+                  case RATCHET:
                     rskm = (RatchetSKM) skm;
-                } else if (skm instanceof MuxedSKM) {
+                    break;
+
+                  case MUXED:
                     rskm = ((MuxedSKM) skm).getECSKM();
-                } else if (skm instanceof MuxedPQSKM) {
+                    break;
+
+                  case MUXEDPQ:
                     rskm = ((MuxedPQSKM) skm).getECSKM();
-                } else {
+                    break;
+
+                  default:
                     if (_log.shouldWarn())
                         _log.warn("No SKM to decrypt ECIES");
                     return null;
@@ -85,11 +92,16 @@ public class GarlicMessageParser {
                 }
             } else if (type.isPQ()) {
                 RatchetSKM rskm;
-                if (skm instanceof RatchetSKM) {
+                switch (skm.getSKMType()) {
+                  case RATCHET:
                     rskm = (RatchetSKM) skm;
-                } else if (skm instanceof MuxedPQSKM) {
+                    break;
+
+                  case MUXEDPQ:
                     rskm = ((MuxedPQSKM) skm).getPQSKM();
-                } else {
+                    break;
+
+                  default:
                     if (_log.shouldWarn())
                         _log.warn("No SKM to decrypt PQ");
                     return null;
@@ -146,18 +158,27 @@ public class GarlicMessageParser {
         byte encData[] = message.getData();
         CloveSet rv;
         try {
-            if (skm instanceof MuxedSKM) {
+            switch (skm.getSKMType()) {
+              case MUXED: {
                 MuxedSKM mskm = (MuxedSKM) skm;
                 rv = _context.eciesEngine().decrypt(encData, elgKey, ecKey, mskm);
-            } else if (skm instanceof MuxedPQSKM) {
+                break;
+              }
+
+              case MUXEDPQ: {
                 MuxedPQSKM mskm = (MuxedPQSKM) skm;
                 // EC is first
                 rv = _context.eciesEngine().decrypt(encData, ecKey, elgKey, mskm);
-            } else if (skm instanceof RatchetSKM) {
+                break;
+              }
+
+              case RATCHET:
                 // unlikely, if we have two keys we should have a MuxedSKM
                 RatchetSKM rskm = (RatchetSKM) skm;
                 rv = _context.eciesEngine().decrypt(encData, ecKey, rskm);
-            } else {
+                break;
+
+              default:
                 // unlikely, if we have two keys we should have a MuxedSKM
                 byte[] decrData = _context.elGamalAESEngine().decrypt(encData, elgKey, skm);
                 if (decrData != null) {
@@ -165,6 +186,7 @@ public class GarlicMessageParser {
                 } else {
                     rv = null; 
                 }
+                break;
             }
         } catch (DataFormatException dfe) {
             if (_log.shouldLog(Log.WARN))
@@ -184,32 +206,27 @@ public class GarlicMessageParser {
      *  @since public since 0.9.44
      */
     public CloveSet readCloveSet(byte data[], int offset) throws DataFormatException {
-        int numCloves = data[offset] & 0xff;
-        offset++;
-        //if (_log.shouldLog(Log.DEBUG))
-        //    _log.debug("# cloves to read: " + numCloves);
-        if (numCloves <= 0 || numCloves > MAX_CLOVES)
-            throw new DataFormatException("bad clove count " + numCloves);
-        GarlicClove[] cloves = new GarlicClove[numCloves];
-        for (int i = 0; i < numCloves; i++) {
-            //if (_log.shouldLog(Log.DEBUG))
-            //    _log.debug("Reading clove " + i);
-                GarlicClove clove = new GarlicClove(_context);
-                offset += clove.readBytes(data, offset);
-                cloves[i] = clove;
-            //if (_log.shouldLog(Log.DEBUG))
-            //    _log.debug("After reading clove " + i);
-        }
-        //Certificate cert = new Certificate();
-        //offset += cert.readBytes(data, offset);
-        Certificate cert = Certificate.create(data, offset);
-        offset += cert.size();
-        long msgId = DataHelper.fromLong(data, offset, 4);
-        offset += 4;
-        //Date expiration = DataHelper.fromDate(data, offset);
-        long expiration = DataHelper.fromLong(data, offset, 8);
+        try {
+            int numCloves = data[offset] & 0xff;
+            offset++;
+            if (numCloves <= 0 || numCloves > MAX_CLOVES)
+                throw new DataFormatException("bad clove count " + numCloves);
+            GarlicClove[] cloves = new GarlicClove[numCloves];
+            for (int i = 0; i < numCloves; i++) {
+                    GarlicClove clove = new GarlicClove(_context);
+                    offset += clove.readBytes(data, offset);
+                    cloves[i] = clove;
+            }
+            Certificate cert = Certificate.create(data, offset);
+            offset += cert.size();
+            long msgId = DataHelper.fromLong(data, offset, 4);
+            offset += 4;
+            long expiration = DataHelper.fromLong(data, offset, 8);
 
-        CloveSet set = new CloveSet(cloves, cert, msgId, expiration);
-        return set;
+            CloveSet set = new CloveSet(cloves, cert, msgId, expiration);
+            return set;
+        } catch (IndexOutOfBoundsException e) {
+            throw new DataFormatException("corrupt clove set", e);
+        }
     }
 }
