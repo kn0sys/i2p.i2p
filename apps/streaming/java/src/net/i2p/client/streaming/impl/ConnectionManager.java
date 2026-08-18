@@ -112,7 +112,8 @@ class ConnectionManager {
         // As of 0.9.1, new option to enforce streaming protocol, off by default
         // As of 0.9.1, listen on configured port (default 0 = all)
         // enforce protocol default changed to true in 0.9.36
-        int protocol = defaultOptions.getEnforceProtocol() ? I2PSession.PROTO_STREAMING : I2PSession.PROTO_ANY;
+        // disable option in 0.9.71
+        int protocol = I2PSession.PROTO_STREAMING;
         _session.addMuxedSessionListener(_messageHandler, protocol, defaultOptions.getLocalPort());
         _outboundQueue = new PacketQueue(_context, _timer);
         _recentlyClosed = new LHMCache<Long, Object>(128);
@@ -265,10 +266,12 @@ class ConnectionManager {
                                 DataHelper.toLong(g, j << 2, 4, nacks[j]);
                             }
                             Hash ghash = new Hash(g);
-                            _log.warn("Sig passed but hash failed, expected: " + hash.toBase32() + " got: " + ghash.toBase32());
+                            _log.warn("Sig passed but hash failed, sending reset, expected: " + hash.toBase32() +
+                                      " got: " + ghash.toBase32() +
+                                      " from: " + from.calculateHash().toBase32());
                         }
-                        sigOk = false;
-                        break;
+                        _packetHandler.sendResetUnverified(synPacket);
+                        return null;
                     }
                 }
                 if (sigOk && _log.shouldDebug())
@@ -394,11 +397,11 @@ class ConnectionManager {
         } else if (size > opts.getMaxInitialMessageSize()) {
             if (size > mtu)
                 size = mtu;
-            if (_log.shouldInfo())
-                _log.info("Increasing MTU for IB conn to " + size 
-                          + " from " + mtu);
-            if (size != mtu)
+            if (size != mtu) {
+                if (_log.shouldInfo())
+                    _log.info("Increasing MTU for IB conn to " + size + " from " + mtu);
                 opts.setMaxMessageSize(size);
+            }
             opts.setMaxInitialMessageSize(size);
         }
 

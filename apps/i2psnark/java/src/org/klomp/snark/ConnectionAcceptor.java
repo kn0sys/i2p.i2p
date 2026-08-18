@@ -53,7 +53,7 @@ class ConnectionAcceptor implements Runnable
 
   // protocol errors before blacklisting.
   private static final int MAX_BAD = 1;
-  private static final long BAD_CLEAN_INTERVAL = 30*60*1000;
+  private static final long BAD_CLEAN_INTERVAL = 147*60*1000;
 
   /**
    *  Multitorrent. Caller MUST call startAccepting()
@@ -180,23 +180,23 @@ class ConnectionAcceptor implements Runnable
             } else {
                 if (socket.getPeerDestination().equals(_util.getMyDestination())) {
                     _log.error("Incoming connection from myself");
-                    try { socket.close(); } catch (IOException ioe) {}
+                    try { socket.reset(); } catch (IOException ioe) {}
                     continue;
                 }
                 Hash h = socket.getPeerDestination().calculateHash();
                 if (socket.getLocalPort() == 80) {
                      _badCounter.increment(h);
                     if (_log.shouldLog(Log.WARN))
-                        _log.error("Dropping incoming HTTP from " + h);
-                    try { socket.close(); } catch (IOException ioe) {}
+                        _log.warn("Dropping incoming HTTP from " + h.toBase32());
+                    try { socket.reset(); } catch (IOException ioe) {}
                     continue;
                 }
                 int bad = _badCounter.count(h);
                 if (bad >= MAX_BAD) {
                     if (_log.shouldLog(Log.WARN))
-                        _log.warn("Rejecting connection from " + h +
+                        _log.warn("Rejecting connection from " + h.toBase32() +
                                   " after " + bad + " failures, max is " + MAX_BAD);
-                    try { socket.close(); } catch (IOException ioe) {}
+                    try { socket.reset(); } catch (IOException ioe) {}
                     continue;
                 }
                 Thread t = new I2PAppThread(new Handler(socket), "I2PSnark incoming connection");
@@ -281,20 +281,34 @@ class ConnectionAcceptor implements Runnable
               // this is for the readahead in PeerAcceptor.connection()
               in = new BufferedInputStream(in);
               if (_log.shouldLog(Log.DEBUG))
-                  _log.debug("Handling socket from " + _socket.getPeerDestination().calculateHash());
+                  _log.debug("Handling socket from " + _socket.getPeerDestination().calculateHash().toBase32() + " to port: " + _socket.getLocalPort());
               peeracceptor.connection(_socket, in, out);
           } catch (PeerAcceptor.ProtocolException ihe) {
               _badCounter.increment(_socket.getPeerDestination().calculateHash());
               if (_log.shouldLog(Log.INFO))
-                  _log.info("Protocol error from " + _socket.getPeerDestination().calculateHash(), ihe);
-              try { _socket.close(); } catch (IOException ignored) { }
+                  _log.info("Protocol error from " + _socket.getPeerDestination().calculateHash().toBase32(), ihe);
+              try { _socket.reset(); } catch (IOException ignored) { }
           } catch (IOException ioe) {
               if (_log.shouldLog(Log.DEBUG))
-                  _log.debug("Error handling connection from " + _socket.getPeerDestination().calculateHash(), ioe);
-              try { _socket.close(); } catch (IOException ignored) { }
+                  _log.debug("Error handling connection from " + _socket.getPeerDestination().calculateHash().toBase32(), ioe);
+              try { _socket.reset(); } catch (IOException ignored) { }
           }
       }
   }
+
+    /**
+     *  @since 0.9.71
+     */
+    public boolean isBanned(Hash h) {
+        return _badCounter.count(h) > 0;
+    }
+
+    /**
+     *  @since 0.9.71
+     */
+    public void ban(Hash h) {
+        _badCounter.increment(h);
+    }
 
     /** @since 0.9.1 */    
     private class Cleaner extends SimpleTimer2.TimedEvent {

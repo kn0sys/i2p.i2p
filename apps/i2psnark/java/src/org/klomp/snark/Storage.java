@@ -28,6 +28,7 @@ import java.io.RandomAccessFile;
 import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
+import java.security.DigestException;
 import java.security.MessageDigest;
 import java.text.Collator;
 import java.util.ArrayList;
@@ -232,7 +233,7 @@ public class Storage implements Closeable
 
     // TODO thread this so we can return and show something on the UI
     byte[] piece_hashes = fast_digestCreate();
-    metainfo = new MetaInfo(announce, baseFile.getName(), null, files,
+    metainfo = new MetaInfo(announce, baseFile.getName(), files,
                             lengthsList, piece_size, piece_hashes, total, privateTorrent,
                             announce_list, created_by, url_list, comment);
 
@@ -254,14 +255,16 @@ public class Storage implements Closeable
     byte[] piece_hashes = new byte[20 * pieces];
 
     byte[] piece = new byte[piece_size];
-    for (int i = 0; i < pieces; i++)
-      {
-        int length = getUncheckedPiece(i, piece);
-        digest.update(piece, 0, length);
-        byte[] hash = digest.digest();
-        System.arraycopy(hash, 0, piece_hashes, 20 * i, 20);
-        bitfield.set(i);
-      }
+    try {
+        for (int i = 0; i < pieces; i++) {
+            int length = getUncheckedPiece(i, piece);
+            digest.update(piece, 0, length);
+            digest.digest(piece_hashes, 20 * i, 20);
+            bitfield.set(i);
+        }
+    } catch (DigestException de) {
+        throw new IOException(de);
+    }
     return piece_hashes;
   }
 
@@ -1781,11 +1784,8 @@ public class Storage implements Closeable
           String hex = DataHelper.toString(meta.getInfoHash());
           System.out.println("Created:     " + file);
           System.out.println("InfoHash:    " + hex);
-          String basename = base.getName().replace(" ", "%20");
-          String magnet = MagnetURI.MAGNET_FULL + hex + "&dn=" + basename;
-          if (announce != null)
-              magnet += "&tr=" + announce;
-          System.out.println("Magnet:      " + magnet);
+          String magnet = MagnetURI.toMagnetLink(meta.getInfoHash(), announce, base.getName());
+          System.out.println("Magnet:      " + magnet.replace("&amp;", "&"));
       } catch (IOException ioe) {
           if (file != null)
               file.delete();

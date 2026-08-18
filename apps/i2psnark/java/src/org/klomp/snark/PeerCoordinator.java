@@ -40,6 +40,7 @@ import net.i2p.I2PAppContext;
 import net.i2p.data.ByteArray;
 import net.i2p.data.DataHelper;
 import net.i2p.data.Destination;
+import net.i2p.data.Hash;
 import net.i2p.util.ConcurrentHashSet;
 import net.i2p.util.I2PAppThread;
 import net.i2p.util.Log;
@@ -76,7 +77,7 @@ class PeerCoordinator implements PeerListener, BandwidthListener
   final static long CHECK_PERIOD = 30*1000;
   final static int MAX_UPLOADERS = 8;
   public static final long MAX_INACTIVE = 8*60*1000;
-  public static final long MAX_SEED_INACTIVE = 2*60*1000;
+  public static final long MAX_SEED_INACTIVE = 4*60*1000;
 
   /**
    * Approximation of the number of current uploaders (unchoked peers),
@@ -1934,5 +1935,19 @@ class PeerCoordinator implements PeerListener, BandwidthListener
           _webPeerBans.remove(host);
       return rv;
   }
+
+    /**
+     *  @since 0.9.71
+     */
+    public boolean isBanned(Hash h) {
+        return listener.isBanned(h);
+    }
+
+    /**
+     *  @since 0.9.71
+     */
+    public void ban(Hash h) {
+        listener.ban(h);
+    }
 }
 
